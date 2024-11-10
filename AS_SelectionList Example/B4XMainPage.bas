@@ -44,7 +44,7 @@ End Sub
 
 Private Sub AS_SelectionList1_SelectionChanged
 	
-	For Each Item As AS_SelectionList_Item In AS_SelectionList1.Selections
+	For Each Item As AS_SelectionList_Item In AS_SelectionList1.GetSelections
 		Log("Item selected: " & Item.Text)
 	Next
 

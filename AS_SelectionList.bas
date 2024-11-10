@@ -237,13 +237,44 @@ Public Sub ClearSelections
 	SelectionChanged
 End Sub
 
-Public Sub getSelections As List
+'<code>
+'	For Each Item As AS_SelectionList_Item In AS_SelectionList1.GetSelections
+'		Log("Item selected: " & Item.Text)
+'	Next
+'</code>
+Public Sub GetSelections As List
 	Dim lst As List
 	lst.Initialize
 	For Each k As AS_SelectionList_Item In m_SelectionMap.Keys
 		lst.Add(k)
 	Next
 	Return lst
+End Sub
+
+'<code>AS_SelectionList1.SetSelections(Array As Object(1,3))</code>
+Public Sub SetSelections(Values() As Object)
+	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
+	xiv_RefreshImage.SetVisibleAnimated(0,True)
+	Sleep(0)
+	
+	Dim tmpMap As Map
+	tmpMap.Initialize
+	For Each Value As Object In Values
+		tmpMap.Put(Value,"")
+	Next
+	
+	m_SelectionMap.Clear
+	For i = 0 To xclv_Main.Size -1
+		Dim ThisItem As AS_SelectionList_Item = xclv_Main.GetValue(i)
+		If tmpMap.ContainsKey(ThisItem.Value) Then
+			m_SelectionMap.Put(ThisItem,i)
+		End If
+		xclv_Main.GetPanel(i).RemoveAllViews
+	Next
+	xclv_Main.Refresh
+	Sleep(0)
+	xiv_RefreshImage.SetVisibleAnimated(0,False)
+	
 End Sub
 
 #End Region
