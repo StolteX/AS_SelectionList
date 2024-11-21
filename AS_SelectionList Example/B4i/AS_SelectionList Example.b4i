@@ -5,10 +5,11 @@ Group=Default Group
 Library1=b4xpages
 Library2=icore
 Library3=xcustomlistview
+Library4=xui views
 Module1=|relative|..\..\AS_SelectionList
 Module2=|relative|..\B4XMainPage
 NumberOfFiles=1
-NumberOfLibraries=3
+NumberOfLibraries=4
 NumberOfModules=2
 Version=8.45
 @EndOfDesignText@

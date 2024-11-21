@@ -28,7 +28,7 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Root.LoadLayout("frm_main")
 	
 	B4XPages.SetTitle(Me,"AS_SelectionList Example")
-
+	AS_SelectionList1.MaxSelectionCount = 3
 	For i = 0 To 80 -1
 		'AS_SelectionList1.AddItem("Test " & (i+1),AS_SelectionList1.FontToBitmap(Chr(0xF179),False,30,xui.Color_Black),i)
 		AS_SelectionList1.AddItem("Test " & (i+1),Null,i)

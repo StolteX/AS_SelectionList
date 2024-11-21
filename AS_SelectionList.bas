@@ -8,11 +8,20 @@ Version=8.45
 Updates
 V1.00
 	-Release
+V1.01
+	-BugFixes
+	-Add get and set MaxSelectionCount - Only in SelectionMode = Multi - Defines the maximum number of items that may be selected
+		-Default: 0
+V1.02
+	-Add Designer Property HapticFeedback
+		-Default: True
+	-BugFix on SearchByText - No longer takes capitalization into account
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
 #DesignerProperty: Key: SelectionMode, DisplayName: SelectionMode, FieldType: String, DefaultValue: Single, List: Single|Multi
 #DesignerProperty: Key: CanDeselect, DisplayName: CanDeselect, FieldType: Boolean, DefaultValue: True , Description: If true, then the user can remove the selection by clicking again
+#DesignerProperty: Key: HapticFeedback, DisplayName: HapticFeedback, FieldType: Boolean, DefaultValue: True
 
 #DesignerProperty: Key: BackgroundColor, DisplayName: Background Color, FieldType: Color, DefaultValue: 0xFFFFFFFF
 #DesignerProperty: Key: ItemBackgroundColor, DisplayName: ItemBackgroundColor Color, FieldType: Color, DefaultValue: 0xFFE3E2E8
@@ -44,6 +53,8 @@ Sub Class_Globals
 	Private m_BackgroundColor As Int
 	Private m_ThemeChangeTransition As String
 	Private m_ShowSeperators As Boolean
+	Private m_MaxSelectionCount As Int = 0
+	Private m_HapticFeedback As Boolean
 	
 	Private xiv_RefreshImage As B4XView
 	
@@ -143,6 +154,7 @@ Private Sub IniProps(Props As Map)
 	m_SelectionMode = Props.Get("SelectionMode")
 	m_CanDeselect = Props.Get("CanDeselect")
 	m_ShowSeperators = Props.Get("ShowSeperators")
+	m_HapticFeedback = Props.GetDefault("HapticFeedback",True)
 	
 	g_ItemProperties.Initialize
 	g_ItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.Get("ItemBackgroundColor"))
@@ -191,7 +203,7 @@ Public Sub SearchByText(Text As String)
 	xclv_Main.Clear
 	m_DataMap.Values.Sort(True)
 	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
-		If Item.Text.Contains(Text) Then AddItemIntern(Item,False)
+		If Item.Text.ToLowerCase.Contains(Text.ToLowerCase) Then AddItemIntern(Item,False)
 	Next
 	
 	Sleep(0)
@@ -280,6 +292,24 @@ End Sub
 #End Region
 
 #Region Properties
+
+Public Sub setHapticFeedback(HapticFeedback As Boolean)
+	m_HapticFeedback = HapticFeedback
+End Sub
+
+Public Sub getHapticFeedback As Boolean
+	Return m_HapticFeedback
+End Sub
+
+'Only in SelectionMode = Multi - Defines the maximum number of items that may be selected
+'Default: 0
+Public Sub setMaxSelectionCount(MaxSelecion As Int)
+	m_MaxSelectionCount = MaxSelecion
+End Sub
+
+Public Sub getMaxSelectionCount As Int
+	Return m_MaxSelectionCount
+End Sub
 
 Public Sub getSize As Int
 	Return m_DataMap.Size
@@ -390,6 +420,7 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 			HandleSelection(xclv_Main.GetPanel(Index),True)
 			SelectionChanged
 		Else If m_SelectionMode = "Multi" Then
+			If m_MaxSelectionCount > 0 And m_MaxSelectionCount = m_SelectionMap.Size Then Return
 			m_SelectionMap.Put(ThisItem,Index)
 			HandleSelection(xclv_Main.GetPanel(Index),True)
 			SelectionChanged
@@ -443,6 +474,7 @@ End Sub
 #Region Events
 
 Private Sub SelectionChanged
+	If m_HapticFeedback Then XUIViewsUtils.PerformHapticFeedback(mBase)
 	If xui.SubExists(mCallBack, mEventName & "_SelectionChanged",0) Then
 		CallSub(mCallBack, mEventName & "_SelectionChanged")
 	End If

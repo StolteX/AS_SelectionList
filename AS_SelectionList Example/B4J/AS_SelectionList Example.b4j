@@ -7,10 +7,11 @@ Library1=b4xpages
 Library2=jcore
 Library3=jfx
 Library4=xcustomlistview
+Library5=xui views
 Module1=|relative|..\..\AS_SelectionList
 Module2=|relative|..\B4XMainPage
 NumberOfFiles=1
-NumberOfLibraries=4
+NumberOfLibraries=5
 NumberOfModules=2
 Version=10
 @EndOfDesignText@

@@ -7,6 +7,6 @@ ModuleBreakpoints2=
 ModuleClosedNodes0=4
 ModuleClosedNodes1=
 ModuleClosedNodes2=1
-NavigationStack=AS_SelectionList,BuildItem,303,0,AS_SelectionList,ClearSelections,230,0,AS_SelectionList,getSize,247,4,AS_SelectionList,getSelections,245,2,Visual Designer,frm_main.bil,-100,3,B4XMainPage,Initialize,16,0,B4XMainPage,xtf_Search_TextChanged,36,1,AS_SelectionList,Class_Globals,18,0,B4XMainPage,AS_SelectionList1_SelectionChanged,38,0,B4XMainPage,B4XPage_Created,29,6
+NavigationStack=AS_SelectionList,ClearSelections,230,0,AS_SelectionList,getSize,247,4,AS_SelectionList,getSelections,245,2,Visual Designer,frm_main.bil,-100,3,B4XMainPage,Initialize,16,0,B4XMainPage,xtf_Search_TextChanged,36,1,AS_SelectionList,Class_Globals,18,0,B4XMainPage,AS_SelectionList1_SelectionChanged,38,0,B4XMainPage,B4XPage_Created,29,6,AS_SelectionList,SelectionChanged,472,0,AS_SelectionList,SearchByText,190,2
 SelectedBuild=0
 VisibleModules=2,1
