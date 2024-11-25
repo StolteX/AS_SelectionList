@@ -16,6 +16,12 @@ V1.02
 	-Add Designer Property HapticFeedback
 		-Default: True
 	-BugFix on SearchByText - No longer takes capitalization into account
+V1.03
+	-BugFixes and Improvemets
+	-Add Clear
+	-Add RebuildList
+	-Add CreateViewPerCode
+	-Add "Height" to AS_SelectionList_ItemProperties Type 
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -33,7 +39,7 @@ V1.02
 Sub Class_Globals
 	
 	Type AS_SelectionList_Item(Text As String,Icon As B4XBitmap,Value As Object)
-	Type AS_SelectionList_ItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int,SeperatorColor As Int)
+	Type AS_SelectionList_ItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int,SeperatorColor As Int,Height As Float)
 	
 	Private mEventName As String 'ignore
 	Private mCallBack As Object 'ignore
@@ -123,6 +129,15 @@ Public Sub Initialize (Callback As Object, EventName As String)
 	m_DataMap.Initialize
 End Sub
 
+Public Sub CreateViewPerCode(Parent As B4XView,Left As Float,Top As Float,Width As Float,Height As Float)
+	
+	Dim xpnl_ViewBase As B4XView = xui.CreatePanel("")
+	Parent.AddView(xpnl_ViewBase,Left,Top,Width,Height)
+	
+	DesignerCreateView(xpnl_ViewBase,CreateLabel(""),CreateMap())
+	
+End Sub
+
 'Base type must be Object
 Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	mBase = Base
@@ -150,10 +165,10 @@ End Sub
 Private Sub IniProps(Props As Map)
 	
 	m_ThemeChangeTransition = Props.GetDefault("ThemeChangeTransition","Fade")
-	m_BackgroundColor = xui.PaintOrColorToColor(Props.Get("BackgroundColor"))
-	m_SelectionMode = Props.Get("SelectionMode")
-	m_CanDeselect = Props.Get("CanDeselect")
-	m_ShowSeperators = Props.Get("ShowSeperators")
+	m_BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("BackgroundColor",0xFFFFFFFF))
+	m_SelectionMode = Props.GetDefault("SelectionMode","Single")
+	m_CanDeselect = Props.GetDefault("CanDeselect",True)
+	m_ShowSeperators = Props.GetDefault("ShowSeperators",True)
 	m_HapticFeedback = Props.GetDefault("HapticFeedback",True)
 	
 	g_ItemProperties.Initialize
@@ -161,10 +176,12 @@ Private Sub IniProps(Props As Map)
 	g_ItemProperties.TextColor = xui.Color_Black
 	g_ItemProperties.xFont = xui.CreateDefaultBoldFont(18)
 	g_ItemProperties.SeperatorColor = xui.PaintOrColorToColor(Props.Get("SeperatorColor"))
+	g_ItemProperties.Height = 50dip
 	
 End Sub
 
-Private Sub Base_Resize (Width As Double, Height As Double)
+Public Sub Base_Resize (Width As Double, Height As Double)
+	mBase.SetLayoutAnimated(0,mBase.Left,mBase.Top,Width,Height)
 	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
 	xclv_Main.AsView.SetLayoutAnimated(0,0,0,Width,Height)
 	xclv_Main.Base_Resize(Width,Height)
@@ -172,7 +189,7 @@ End Sub
 
 #Region Methods
 
-Public Sub AddItem(Text As String,Icon As B4XBitmap,Value As Object)
+Public Sub AddItem(Text As String,Icon As B4XBitmap,Value As Object) As AS_SelectionList_Item
 	
 	Dim Item As AS_SelectionList_Item
 	Item.Initialize
@@ -181,18 +198,38 @@ Public Sub AddItem(Text As String,Icon As B4XBitmap,Value As Object)
 	Item.Value = Value
 	
 	AddItemIntern(Item,True)
-	
+	Return Item
 End Sub
 
 Private Sub AddItemIntern(Item As AS_SelectionList_Item,Add2DataMap As Boolean)
 	
 	Dim xpnl_Background As B4XView = xui.CreatePanel("")
-	xpnl_Background.SetLayoutAnimated(0,0,0,mBase.Width,50dip)
+	xpnl_Background.SetLayoutAnimated(0,0,0,mBase.Width,g_ItemProperties.Height)
 	xpnl_Background.Color = m_BackgroundColor
 	
 	If Add2DataMap Then m_DataMap.Put(Item,xclv_Main.Size)
 	xclv_Main.Add(xpnl_Background,Item)
 	
+End Sub
+
+Public Sub Clear
+	xclv_Main.Clear
+	m_DataMap.Clear
+End Sub
+
+Public Sub RebuildList
+	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
+	xiv_RefreshImage.SetVisibleAnimated(0,True)
+	Sleep(0)
+	
+	xclv_Main.Clear
+	m_DataMap.Values.Sort(True)
+	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
+		AddItemIntern(Item,False)
+	Next
+	
+	Sleep(0)
+	xiv_RefreshImage.SetVisibleAnimated(0,False)
 End Sub
 
 Public Sub SearchByText(Text As String)
@@ -226,18 +263,7 @@ Public Sub SearchByValue(Value As Object)
 End Sub
 
 Public Sub ClearSearch
-	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
-	xiv_RefreshImage.SetVisibleAnimated(0,True)
-	Sleep(0)
-	
-	xclv_Main.Clear
-	m_DataMap.Values.Sort(True)
-	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
-		AddItemIntern(Item,False)
-	Next
-	
-	Sleep(0)
-	xiv_RefreshImage.SetVisibleAnimated(0,False)
+	RebuildList
 End Sub
 
 Public Sub ClearSelections
@@ -293,12 +319,30 @@ End Sub
 
 #Region Properties
 
+'Fade or None
+Public Sub setThemeChangeTransition(ThemeChangeTransition As String)
+	m_ThemeChangeTransition = ThemeChangeTransition
+End Sub
+
+Public Sub getThemeChangeTransition As String
+	Return m_ThemeChangeTransition
+End Sub
+
 Public Sub setHapticFeedback(HapticFeedback As Boolean)
 	m_HapticFeedback = HapticFeedback
 End Sub
 
 Public Sub getHapticFeedback As Boolean
 	Return m_HapticFeedback
+End Sub
+
+'Single or Multi
+Public Sub getSelectionMode As String
+	Return m_SelectionMode
+End Sub
+
+Public Sub setSelectionMode(SelectionMode As String)
+	m_SelectionMode = SelectionMode
 End Sub
 
 'Only in SelectionMode = Multi - Defines the maximum number of items that may be selected
@@ -325,6 +369,11 @@ End Sub
 
 Public Sub getBackgroundColor As Int
 	Return m_BackgroundColor
+End Sub
+
+'Height: Default: 50dip
+Public Sub getItemProperties As AS_SelectionList_ItemProperties
+	Return g_ItemProperties
 End Sub
 
 #End Region
@@ -478,6 +527,26 @@ Private Sub SelectionChanged
 	If xui.SubExists(mCallBack, mEventName & "_SelectionChanged",0) Then
 		CallSub(mCallBack, mEventName & "_SelectionChanged")
 	End If
+End Sub
+
+#End Region
+
+#Region Enums
+
+Public Sub getThemeChangeTransition_Fade As String
+	Return "Fade"
+End Sub
+
+Public Sub getThemeChangeTransition_None As String
+	Return "None"
+End Sub
+
+Public Sub getSelectionMode_Single As String
+	Return "Single"
+End Sub
+
+Public Sub getSelectionMode_Multi As String
+	Return "Multi"
 End Sub
 
 #End Region
