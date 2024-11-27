@@ -24,6 +24,8 @@ V1.03
 	-Add "Height" to AS_SelectionList_ItemProperties Type 
 V1.04
 	-BugFixes
+V1.05
+	-Add GetItems - Get all items as list of AS_SelectionList_Item
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -190,6 +192,16 @@ Public Sub Base_Resize (Width As Double, Height As Double)
 End Sub
 
 #Region Methods
+
+'Get all items as list of AS_SelectionList_Item
+Public Sub GetItems As List
+	Dim lstItems As List
+	lstItems.Initialize
+	For i = 0 To xclv_Main.Size -1
+		lstItems.Add(xclv_Main.GetValue(i))
+	Next
+	Return lstItems
+End Sub
 
 Public Sub AddItem(Text As String,Icon As B4XBitmap,Value As Object) As AS_SelectionList_Item
 	
