@@ -22,6 +22,8 @@ V1.03
 	-Add RebuildList
 	-Add CreateViewPerCode
 	-Add "Height" to AS_SelectionList_ItemProperties Type 
+V1.04
+	-BugFixes
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -172,10 +174,10 @@ Private Sub IniProps(Props As Map)
 	m_HapticFeedback = Props.GetDefault("HapticFeedback",True)
 	
 	g_ItemProperties.Initialize
-	g_ItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.Get("ItemBackgroundColor"))
+	g_ItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
 	g_ItemProperties.TextColor = xui.Color_Black
 	g_ItemProperties.xFont = xui.CreateDefaultBoldFont(18)
-	g_ItemProperties.SeperatorColor = xui.PaintOrColorToColor(Props.Get("SeperatorColor"))
+	g_ItemProperties.SeperatorColor = xui.PaintOrColorToColor(Props.GetDefault("SeperatorColor",0x28000000))
 	g_ItemProperties.Height = 50dip
 	
 End Sub
