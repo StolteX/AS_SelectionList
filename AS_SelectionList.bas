@@ -538,11 +538,11 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		If m_SelectionMode = "Single" Then
 			For i = 0 To xclv_Main.size -1
 				If m_SelectionMap.ContainsKey(xclv_Main.GetValue(i).As(AS_SelectionList_Item)) Then
+					m_SelectionMap.Clear
 					HandleSelection(xclv_Main.GetPanel(i))
 					Exit
 				End If
 			Next
-			m_SelectionMap.Clear
 			m_SelectionMap.Put(ThisItem,Index)
 			HandleSelection(xclv_Main.GetPanel(Index))
 			SelectionChanged
