@@ -26,6 +26,17 @@ V1.04
 	-BugFixes
 V1.05
 	-Add GetItems - Get all items as list of AS_SelectionList_Item
+V1.06
+	-Add SetSelections2 - Set the Selections via a list
+	-Add Type AS_SelectionList_SelectedItemProperties
+		-Per Default the same settings as the AS_SelectionList_ItemProperties
+	-Add get and set SideGap
+		-Default: 10dip
+	-Add Desginer Property SeperatorWidth
+		-Default: BeginWithText
+		-BeginWithText - The separator begins where the text begins
+		-FullWidth - Full width
+		-BeginWithIcon - The separator starts where the icon begins, if there is no icon, then where the text begins
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -36,6 +47,7 @@ V1.05
 #DesignerProperty: Key: BackgroundColor, DisplayName: Background Color, FieldType: Color, DefaultValue: 0xFFFFFFFF
 #DesignerProperty: Key: ItemBackgroundColor, DisplayName: ItemBackgroundColor Color, FieldType: Color, DefaultValue: 0xFFE3E2E8
 #DesignerProperty: Key: ShowSeperators, DisplayName: ShowSeperators, FieldType: Boolean, DefaultValue: True , Description: Show seperators between items
+#DesignerProperty: Key: SeperatorWidth, DisplayName: SeperatorWidth, FieldType: String, DefaultValue: BeginWithText, List: BeginWithText|FullWidth|BeginWithIcon
 #DesignerProperty: Key: SeperatorColor, DisplayName: SeperatorColor, FieldType: Color, DefaultValue: 0x28000000
 
 #Event: SelectionChanged
@@ -44,6 +56,7 @@ Sub Class_Globals
 	
 	Type AS_SelectionList_Item(Text As String,Icon As B4XBitmap,Value As Object)
 	Type AS_SelectionList_ItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int,SeperatorColor As Int,Height As Float)
+	Type AS_SelectionList_SelectedItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int)
 	
 	Private mEventName As String 'ignore
 	Private mCallBack As Object 'ignore
@@ -53,6 +66,7 @@ Sub Class_Globals
 	Private m_DataMap As B4XOrderedMap
 	
 	Private g_ItemProperties As AS_SelectionList_ItemProperties
+	Private g_SelectedItemProperties As AS_SelectionList_SelectedItemProperties
 	
 	Private xclv_Main As CustomListView
 	Private m_SelectionMap As Map
@@ -63,6 +77,7 @@ Sub Class_Globals
 	Private m_BackgroundColor As Int
 	Private m_ThemeChangeTransition As String
 	Private m_ShowSeperators As Boolean
+	Private m_SeperatorWidth As String
 	Private m_MaxSelectionCount As Int = 0
 	Private m_HapticFeedback As Boolean
 	
@@ -80,6 +95,9 @@ Public Sub setTheme(Theme As AS_SelectionList_Theme)
 	g_ItemProperties.BackgroundColor = Theme.Item_BackgroundColor
 	g_ItemProperties.TextColor = Theme.Item_TextColor
 	g_ItemProperties.SeperatorColor = Theme.Item_SeperatorColor
+	
+	g_SelectedItemProperties.BackgroundColor = Theme.Item_BackgroundColor
+	g_SelectedItemProperties.TextColor = Theme.Item_TextColor
 	
 	Sleep(0)
 	
@@ -174,6 +192,7 @@ Private Sub IniProps(Props As Map)
 	m_CanDeselect = Props.GetDefault("CanDeselect",True)
 	m_ShowSeperators = Props.GetDefault("ShowSeperators",True)
 	m_HapticFeedback = Props.GetDefault("HapticFeedback",True)
+	m_SeperatorWidth = Props.GetDefault("SeperatorWidth",getSeperatorWidth_BeginWithText)
 	
 	g_ItemProperties.Initialize
 	g_ItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
@@ -181,6 +200,11 @@ Private Sub IniProps(Props As Map)
 	g_ItemProperties.xFont = xui.CreateDefaultBoldFont(18)
 	g_ItemProperties.SeperatorColor = xui.PaintOrColorToColor(Props.GetDefault("SeperatorColor",0x28000000))
 	g_ItemProperties.Height = 50dip
+	
+	g_SelectedItemProperties.Initialize
+	g_SelectedItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
+	g_SelectedItemProperties.TextColor = xui.Color_Black
+	g_SelectedItemProperties.xFont = xui.CreateDefaultBoldFont(18)
 	
 End Sub
 
@@ -216,7 +240,7 @@ Public Sub AddItem(Text As String,Icon As B4XBitmap,Value As Object) As AS_Selec
 End Sub
 
 Private Sub AddItemIntern(Item As AS_SelectionList_Item,Add2DataMap As Boolean)
-	
+
 	Dim xpnl_Background As B4XView = xui.CreatePanel("")
 	xpnl_Background.SetLayoutAnimated(0,0,0,mBase.Width,g_ItemProperties.Height)
 	xpnl_Background.Color = m_BackgroundColor
@@ -305,20 +329,39 @@ End Sub
 
 '<code>AS_SelectionList1.SetSelections(Array As Object(1,3))</code>
 Public Sub SetSelections(Values() As Object)
-	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
-	xiv_RefreshImage.SetVisibleAnimated(0,True)
-	Sleep(0)
-	
 	Dim tmpMap As Map
 	tmpMap.Initialize
 	For Each Value As Object In Values
 		tmpMap.Put(Value,"")
 	Next
+	SetSelectionIntern(tmpMap)
+End Sub
+
+'<code>
+'	Dim lst As List
+'	lst.Initialize
+'	lst.Add(1)
+'	lst.Add(3)
+'	AS_SelectionList1.SetSelections2(lst)
+'</code>
+Public Sub SetSelections2(Values As List)
+	Dim tmpMap As Map
+	tmpMap.Initialize
+	For Each Value As Object In Values
+		tmpMap.Put(Value,"")
+	Next
+	SetSelectionIntern(tmpMap)
+End Sub
+
+Private Sub SetSelectionIntern(Values As Map)
+	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
+	xiv_RefreshImage.SetVisibleAnimated(0,True)
+	Sleep(0)
 	
 	m_SelectionMap.Clear
 	For i = 0 To xclv_Main.Size -1
 		Dim ThisItem As AS_SelectionList_Item = xclv_Main.GetValue(i)
-		If tmpMap.ContainsKey(ThisItem.Value) Then
+		If Values.ContainsKey(ThisItem.Value) Then
 			m_SelectionMap.Put(ThisItem,i)
 		End If
 		xclv_Main.GetPanel(i).RemoveAllViews
@@ -326,12 +369,20 @@ Public Sub SetSelections(Values() As Object)
 	xclv_Main.Refresh
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
-	
 End Sub
 
 #End Region
 
 #Region Properties
+
+'Default: 10dip
+Public Sub setSideGap(SideGap As Float)
+	m_SideGap = SideGap
+End Sub
+
+Public Sub getSideGap As Float
+	Return m_SideGap
+End Sub
 
 'Fade or None
 Public Sub setThemeChangeTransition(ThemeChangeTransition As String)
@@ -390,24 +441,31 @@ Public Sub getItemProperties As AS_SelectionList_ItemProperties
 	Return g_ItemProperties
 End Sub
 
+Public Sub getSelectedItemProperties As AS_SelectionList_SelectedItemProperties
+	Return g_SelectedItemProperties
+End Sub
+
 #End Region
 
 #Region InternFunctions
 
 Private Sub BuildItem(xpnl_Background As B4XView,Item As AS_SelectionList_Item)
+	
+	Dim isSelected As Boolean = m_SelectionMap.ContainsKey(Item)
+	
 	Dim xpnl_ItemBackground As B4XView = xui.CreatePanel("")
 	xpnl_ItemBackground.Tag = "xpnl_ItemBackground"
 	xpnl_Background.AddView(xpnl_ItemBackground,m_SideGap,0,mBase.Width - m_SideGap*2,xpnl_Background.Height)
 	xpnl_Background.Color = m_BackgroundColor
-	xpnl_ItemBackground.Color = g_ItemProperties.BackgroundColor
+	xpnl_ItemBackground.Color = IIf(isSelected,g_SelectedItemProperties.BackgroundColor, g_ItemProperties.BackgroundColor)
 	
 	Dim TextGap As Float = 5dip
 	
 
 	Dim xlbl_ItemText As B4XView = CreateLabel("")
 	xlbl_ItemText.Text = Item.Text
-	xlbl_ItemText.Font = g_ItemProperties.xFont
-	xlbl_ItemText.TextColor = g_ItemProperties.TextColor
+	xlbl_ItemText.Font = IIf(isSelected,g_SelectedItemProperties.xFont, g_ItemProperties.xFont)
+	xlbl_ItemText.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, g_ItemProperties.TextColor)
 	xlbl_ItemText.SetTextAlignment("CENTER","LEFT")
 	#If B4I
 	xlbl_ItemText.As(Label).Multiline = True
@@ -418,7 +476,7 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As AS_SelectionList_Item)
 	#End If
 	
 	Dim xlbl_CheckItem As B4XView = CreateLabel("")
-	xlbl_CheckItem.TextColor = g_ItemProperties.TextColor
+	xlbl_CheckItem.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, g_ItemProperties.TextColor)
 	xlbl_CheckItem.SetTextAlignment("CENTER","CENTER")
 	xlbl_CheckItem.Font = xui.CreateMaterialIcons(20)
 	
@@ -442,7 +500,13 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As AS_SelectionList_Item)
 		xiv_Icon.SetBitmap(Item.Icon)
 	End If
 	
-	xpnl_ItemBackground.AddView(xpnl_Seperator,xlbl_ItemText.Left,0,xpnl_ItemBackground.Width,1dip)
+	If m_SeperatorWidth = getSeperatorWidth_BeginWithText Or (m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Item.Icon.IsInitialized = False) Then
+		xpnl_ItemBackground.AddView(xpnl_Seperator,xlbl_ItemText.Left,0,xpnl_ItemBackground.Width,1dip)
+	Else If m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Item.Icon.IsInitialized Then
+		xpnl_ItemBackground.AddView(xpnl_Seperator,xiv_Icon.Left,0,xpnl_ItemBackground.Width,1dip)
+	Else If m_SeperatorWidth = getSeperatorWidth_FullWidth Then
+		xpnl_ItemBackground.AddView(xpnl_Seperator,0,0,xpnl_ItemBackground.Width,1dip)
+	End If
 	
 	Dim CurrentIndex As Int = xclv_Main.GetItemFromView(xpnl_ItemBackground)
 	xpnl_Seperator.Visible = m_ShowSeperators And CurrentIndex > 0
@@ -467,25 +531,25 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 	
 	If m_SelectionMap.ContainsKey(ThisItem) And m_CanDeselect Then
 		m_SelectionMap.Remove(ThisItem)
-		HandleSelection(xclv_Main.GetPanel(Index),False)
+		HandleSelection(xclv_Main.GetPanel(Index))
 		SelectionChanged
 	Else If m_SelectionMap.ContainsKey(ThisItem) = False Then
 		
 		If m_SelectionMode = "Single" Then
 			For i = 0 To xclv_Main.size -1
 				If m_SelectionMap.ContainsKey(xclv_Main.GetValue(i).As(AS_SelectionList_Item)) Then
-					HandleSelection(xclv_Main.GetPanel(i),False)
+					HandleSelection(xclv_Main.GetPanel(i))
 					Exit
 				End If
 			Next
 			m_SelectionMap.Clear
 			m_SelectionMap.Put(ThisItem,Index)
-			HandleSelection(xclv_Main.GetPanel(Index),True)
+			HandleSelection(xclv_Main.GetPanel(Index))
 			SelectionChanged
 		Else If m_SelectionMode = "Multi" Then
 			If m_MaxSelectionCount > 0 And m_MaxSelectionCount = m_SelectionMap.Size Then Return
 			m_SelectionMap.Put(ThisItem,Index)
-			HandleSelection(xclv_Main.GetPanel(Index),True)
+			HandleSelection(xclv_Main.GetPanel(Index))
 			SelectionChanged
 		End If
 		
@@ -493,23 +557,11 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 
 End Sub
 
-Private Sub HandleSelection(xpnl_Background As B4XView,isSelected As Boolean)
+Private Sub HandleSelection(xpnl_Background As B4XView)
 	
-	Dim xpnl_ItemBackground As B4XView
-	For Each view As B4XView In xpnl_Background.GetAllViewsRecursive
-		If view.Tag Is String And view.Tag = "xpnl_ItemBackground" Then
-			xpnl_ItemBackground = view
-			Exit
-		End If
-	Next
-	If xpnl_ItemBackground.IsInitialized = False Then Return
-	
-	Dim xlbl_CheckItem As B4XView = xpnl_ItemBackground.GetView(1)
-	If isSelected Then
-		xlbl_CheckItem.Text = Chr(0xE5CA)
-	Else
-		xlbl_CheckItem.Text = ""
-	End If
+	Dim Index As Int = xclv_Main.GetItemFromView(xpnl_Background)
+    xpnl_Background.RemoveAllViews
+	BuildItem(xpnl_Background,xclv_Main.GetValue(Index))
 
 End Sub
 
@@ -561,6 +613,19 @@ End Sub
 
 Public Sub getSelectionMode_Multi As String
 	Return "Multi"
+End Sub
+
+
+Public Sub getSeperatorWidth_BeginWithText As String
+	Return "BeginWithText"
+End Sub
+
+Public Sub getSeperatorWidth_BeginWithIcon As String
+	Return "BeginWithIcon"
+End Sub
+
+Public Sub getSeperatorWidth_FullWidth As String
+	Return "FullWidth"
 End Sub
 
 #End Region

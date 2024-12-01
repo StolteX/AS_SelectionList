@@ -16,7 +16,7 @@ NumberOfModules=2
 Version=10
 @EndOfDesignText@
 #Region Project Attributes 
-	#MainFormWidth: 600
+	#MainFormWidth: 500
 	#MainFormHeight: 600 
 #End Region
 
