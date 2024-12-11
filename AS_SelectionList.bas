@@ -57,9 +57,11 @@ V1.07 (nicht veröffentlicht)
 Sub Class_Globals
 	
 	Type AS_SelectionList_Item(Text As String,Icon As B4XBitmap,Value As Object)
-	Type AS_SelectionList_SubItem(RootItem As AS_SelectionList_Item,Text As String,Icon As B4XBitmap,Value As Object)
 	Type AS_SelectionList_ItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int,SeperatorColor As Int,Height As Float)
 	Type AS_SelectionList_SelectedItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int)
+	
+	Type AS_SelectionList_SubItem(RootItem As AS_SelectionList_Item,Text As String,Icon As B4XBitmap,Value As Object)
+	Type AS_SelectionList_SubItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int,SeperatorColor As Int,Height As Float)
 	
 	Private mEventName As String 'ignore
 	Private mCallBack As Object 'ignore
@@ -70,6 +72,7 @@ Sub Class_Globals
 	Private m_SubDataMap As B4XOrderedMap
 	
 	Private g_ItemProperties As AS_SelectionList_ItemProperties
+	Private g_SubItemProperties As AS_SelectionList_SubItemProperties
 	Private g_SelectedItemProperties As AS_SelectionList_SelectedItemProperties
 	
 	Private xclv_Main As CustomListView
@@ -85,6 +88,7 @@ Sub Class_Globals
 	Private m_SeperatorWidth As String
 	Private m_MaxSelectionCount As Int = 0
 	Private m_HapticFeedback As Boolean
+	Private m_isSubMenuOpen as Boolean = False
 	
 	'***SubItems***
 	Private xpnl_SubItemBackground As B4XView
@@ -97,7 +101,7 @@ Sub Class_Globals
 	
 	Private xiv_RefreshImage As B4XView
 	
-	Type AS_SelectionList_Theme(BackgroundColor As Int,Item_BackgroundColor As Int,Item_TextColor As Int,Item_SeperatorColor As Int)
+	Type AS_SelectionList_Theme(BackgroundColor As Int,Item_BackgroundColor As Int,Item_TextColor As Int,Item_SeperatorColor As Int,SubItem_BackgroundColor As Int,SubItem_TextColor As Int,SubItem_SeperatorColor As Int)
 	
 End Sub
 
@@ -109,6 +113,10 @@ Public Sub setTheme(Theme As AS_SelectionList_Theme)
 	g_ItemProperties.BackgroundColor = Theme.Item_BackgroundColor
 	g_ItemProperties.TextColor = Theme.Item_TextColor
 	g_ItemProperties.SeperatorColor = Theme.Item_SeperatorColor
+	
+	g_SubItemProperties.BackgroundColor = Theme.SubItem_BackgroundColor
+	g_SubItemProperties.TextColor = Theme.SubItem_TextColor
+	g_SubItemProperties.SeperatorColor = Theme.SubItem_SeperatorColor
 	
 	g_SelectedItemProperties.BackgroundColor = Theme.Item_BackgroundColor
 	g_SelectedItemProperties.TextColor = Theme.Item_TextColor
@@ -141,6 +149,10 @@ Public Sub getTheme_Dark As AS_SelectionList_Theme
 	Theme.Item_TextColor = xui.Color_White
 	Theme.Item_SeperatorColor = xui.Color_ARGB(40,255,255,255)
 	
+	Theme.SubItem_BackgroundColor = xui.Color_ARGB(255,32, 33, 37)
+	Theme.SubItem_TextColor = xui.Color_White
+	Theme.SubItem_SeperatorColor = xui.Color_ARGB(40,255,255,255)
+	
 	Return Theme
 	
 End Sub
@@ -153,6 +165,11 @@ Public Sub getTheme_Light As AS_SelectionList_Theme
 	Theme.Item_BackgroundColor = xui.Color_ARGB(255,227, 226, 232)
 	Theme.Item_TextColor = xui.Color_Black
 	Theme.Item_SeperatorColor = xui.Color_ARGB(40,0,0,0)
+	
+	
+	Theme.SubItem_BackgroundColor = xui.Color_ARGB(255,227, 226, 232)
+	Theme.SubItem_TextColor = xui.Color_Black
+	Theme.SubItem_SeperatorColor = xui.Color_ARGB(40,0,0,0)
 	
 	Return Theme
 	
@@ -228,6 +245,13 @@ Private Sub IniProps(Props As Map)
 	g_ItemProperties.xFont = xui.CreateDefaultBoldFont(18)
 	g_ItemProperties.SeperatorColor = xui.PaintOrColorToColor(Props.GetDefault("SeperatorColor",0x28000000))
 	g_ItemProperties.Height = 50dip
+	
+	g_SubItemProperties.Initialize
+	g_SubItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
+	g_SubItemProperties.TextColor = xui.Color_Black
+	g_SubItemProperties.xFont = xui.CreateDefaultBoldFont(16)
+	g_SubItemProperties.SeperatorColor = xui.PaintOrColorToColor(Props.GetDefault("SeperatorColor",0x28000000))
+	g_SubItemProperties.Height = 50dip
 	
 	g_SelectedItemProperties.Initialize
 	g_SelectedItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
@@ -493,6 +517,11 @@ Public Sub getItemProperties As AS_SelectionList_ItemProperties
 	Return g_ItemProperties
 End Sub
 
+'Height: Default: 50dip
+Public Sub getSubItemProperties As AS_SelectionList_SubItemProperties
+	Return g_SubItemProperties
+End Sub
+
 Public Sub getSelectedItemProperties As AS_SelectionList_SelectedItemProperties
 	Return g_SelectedItemProperties
 End Sub
@@ -504,17 +533,33 @@ End Sub
 Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomListView)
 	
 	Dim SideGap As Float = IIf(xclv = xclv_Main,m_SideGap,0)
-	Dim ItemWidth As Float = IIf(xclv = xclv_Main,mBase.Width - SideGap*2,xclv_SubItems.AsView.Width)
+	Dim ItemWidth As Float = IIf(xclv = xclv_Main,mBase.Width - SideGap*2,xclv_SubItems.AsView.Width + 6dip)
 	
 	Dim Text As String
 	Dim Icon As B4XBitmap
 	
+	Dim BackgroundColor As Int
+	Dim xFont As B4XFont
+	Dim TextColor As Int
+	Dim SeperatorColor As Int
+	'Dim Height As Float
+	
 	If Item Is AS_SelectionList_Item Then
 		Text = Item.As(AS_SelectionList_Item).Text
 		Icon = Item.As(AS_SelectionList_Item).Icon
+		BackgroundColor = g_ItemProperties.BackgroundColor
+		xFont = g_ItemProperties.xFont
+		TextColor = g_ItemProperties.TextColor
+		SeperatorColor = g_ItemProperties.SeperatorColor
+		'Height = g_ItemProperties.Height
 	Else
 		Text = Item.As(AS_SelectionList_SubItem).Text
 		Icon = Item.As(AS_SelectionList_SubItem).Icon
+		BackgroundColor = g_SubItemProperties.BackgroundColor
+		xFont = g_SubItemProperties.xFont
+		TextColor = g_SubItemProperties.TextColor
+		SeperatorColor = g_SubItemProperties.SeperatorColor
+		'Height = g_SubItemProperties.Height
 	End If
 	
 	Dim isSelected As Boolean = m_SelectionMap.ContainsKey(Item)
@@ -523,15 +568,15 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	xpnl_ItemBackground.Tag = "xpnl_ItemBackground"
 	xpnl_Background.AddView(xpnl_ItemBackground,SideGap,0,ItemWidth,xpnl_Background.Height)
 	xpnl_Background.Color = m_BackgroundColor
-	xpnl_ItemBackground.Color = IIf(isSelected,g_SelectedItemProperties.BackgroundColor, g_ItemProperties.BackgroundColor)
+	xpnl_ItemBackground.Color = IIf(isSelected,g_SelectedItemProperties.BackgroundColor, BackgroundColor)
 	
 	Dim TextGap As Float = 5dip
 	
 
 	Dim xlbl_ItemText As B4XView = CreateLabel("")
 	xlbl_ItemText.Text = Text
-	xlbl_ItemText.Font = IIf(isSelected,g_SelectedItemProperties.xFont, g_ItemProperties.xFont)
-	xlbl_ItemText.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, g_ItemProperties.TextColor)
+	xlbl_ItemText.Font = IIf(isSelected,g_SelectedItemProperties.xFont, xFont)
+	xlbl_ItemText.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, TextColor)
 	xlbl_ItemText.SetTextAlignment("CENTER","LEFT")
 	#If B4I
 	xlbl_ItemText.As(Label).Multiline = True
@@ -542,7 +587,7 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	#End If
 	
 	Dim xlbl_CheckItem As B4XView = CreateLabel("")
-	xlbl_CheckItem.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, g_ItemProperties.TextColor)
+	xlbl_CheckItem.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, TextColor)
 	xlbl_CheckItem.SetTextAlignment("CENTER","CENTER")
 	xlbl_CheckItem.Font = xui.CreateMaterialIcons(20)
 	
@@ -554,7 +599,7 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 
 	Dim xpnl_Seperator As B4XView = xui.CreatePanel("")
 	xpnl_Seperator.Tag = "xpnl_Seperator"
-	xpnl_Seperator.Color = g_ItemProperties.SeperatorColor
+	xpnl_Seperator.Color = SeperatorColor
 
 	xpnl_ItemBackground.AddView(xlbl_ItemText,TextGap,0,xpnl_ItemBackground.Width - TextGap*2,xpnl_Background.Height)
 	xpnl_ItemBackground.AddView(xlbl_CheckItem,xpnl_ItemBackground.Width - 40dip,0,40dip,xpnl_ItemBackground.Height)
@@ -579,23 +624,23 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	End If
 	
 	'If Item Is AS_SelectionList_Item Then
-		'RootItem
-		Dim xlbl_CollapsButton As B4XView = CreateLabel("xlbl_CollapsButton")
-		xlbl_CollapsButton.Tag = "xlbl_CollapsButton"
-		xlbl_CollapsButton.Text = Chr(0xE315)
-		xlbl_CollapsButton.Font = xui.CreateMaterialIcons(25)
-		xlbl_CollapsButton.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, g_ItemProperties.TextColor)
-		xlbl_CollapsButton.SetTextAlignment("CENTER","CENTER")
-		xpnl_ItemBackground.AddView(xlbl_CollapsButton,0,0,30dip,xpnl_ItemBackground.Height)
-		'xlbl_CollapsButton.Color = xui.Color_Red
+	'RootItem
+	Dim xlbl_CollapsButton As B4XView = CreateLabel("xlbl_CollapsButton")
+	xlbl_CollapsButton.Tag = "xlbl_CollapsButton"
+	xlbl_CollapsButton.Text = Chr(0xE315)
+	xlbl_CollapsButton.Font = xui.CreateMaterialIcons(25)
+	xlbl_CollapsButton.TextColor = IIf(isSelected,g_SelectedItemProperties.TextColor, TextColor)
+	xlbl_CollapsButton.SetTextAlignment("CENTER","CENTER")
+	xpnl_ItemBackground.AddView(xlbl_CollapsButton,0,0,30dip,xpnl_ItemBackground.Height)
+	'xlbl_CollapsButton.Color = xui.Color_Red
 	
-		If m_SubDataMap.Size > 0 Then
-			xlbl_ItemText.Left = xlbl_ItemText.Left + xlbl_CollapsButton.Width
-			xlbl_ItemText.Width = xlbl_ItemText.Width - xlbl_CollapsButton.Width
-			xiv_Icon.Left = xiv_Icon.Left + xlbl_CollapsButton.Width
-		End If
+	If m_SubDataMap.Size > 0 Then
+		xlbl_ItemText.Left = xlbl_ItemText.Left + xlbl_CollapsButton.Width
+		xlbl_ItemText.Width = xlbl_ItemText.Width - xlbl_CollapsButton.Width
+		xiv_Icon.Left = xiv_Icon.Left + xlbl_CollapsButton.Width
+	End If
 		
-		xlbl_CollapsButton.Visible = m_SubDataMap.ContainsKey(Item)
+	xlbl_CollapsButton.Visible = m_SubDataMap.ContainsKey(Item)
 		
 	'End If
 	
@@ -618,9 +663,22 @@ Private Sub xpnl_SubItemBackground_MouseClicked (EventData As MouseEvent)
 #Else
 Private Sub xpnl_SubItemBackground_Click
 #End If
-	xclv_Main.AsView.SetLayoutAnimated(200,0,xclv_Main.AsView.Top,xclv_Main.AsView.Width + 5dip,xclv_Main.AsView.Height)
+
+	CloseSubMenu
+	
+End Sub
+
+Public Sub CloseSubMenu
+	If m_isSubMenuOpen = False Then Return
+
+	If xpnl_SubItemListBase.Top > 0 Then
+		xclv_Main.AsView.SetLayoutAnimated(200,0,xclv_Main.AsView.Top,xclv_Main.AsView.Width + 5dip,xclv_Main.AsView.Height)
+		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top + 10dip,xpnl_SubItemListBase.Width - 5dip,g_ItemProperties.Height)
+	Else
+		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,xpnl_SubItemListBase.Width,g_ItemProperties.Height)
+	End If
+
 	xlbl_RootCollapsButton.SetRotationAnimated(200,0)
-	xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top + 10dip,xpnl_SubItemListBase.Width - 5dip,g_ItemProperties.Height)
 	Sleep(200)
 	xpnl_SubItemBackground.Visible = False
 	
@@ -628,13 +686,12 @@ Private Sub xpnl_SubItemBackground_Click
 	xpnl_RootClvPanelBackground.AddView(xpnl_RootItemBackground,m_SideGap,0,mBase.Width-m_SideGap*2,xpnl_RootItemBackground.Height)
 	xpnl_RootItemBackground.SendToBack
 	xclv_SubItems.Clear
-	
+	m_isSubMenuOpen = False
 '	For Each v As B4XView In xpnl_RootItemBackground.GetAllViewsRecursive
 '		If v.Tag Is String And v.Tag = "xpnl_Seperator" Then
 '			v.Visible = True
 '		End If
 '	Next
-	
 End Sub
 
 Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
@@ -642,18 +699,23 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 	
 	If m_SubDataMap.ContainsKey(Value) Then
 		
+		If m_isSubMenuOpen Then
+			CloseSubMenu
+			Return
+		End If
+		
 		'Aufklappen
 		'Hintergrund Abdunkeln
 		'Neues Panel erstellen was übern Item liegt
 		'1. Item ist das root element welches man dort anhaken kann
 		'darunter die subitems
-		
+		m_isSubMenuOpen = True
 		xpnl_RootClvPanelBackground = xclv_Main.GetPanel(Index)
 		xpnl_RootItemBackground = xclv_Main.GetPanel(Index).GetView(0)
 		xpnl_SubItemBackground.SetLayoutAnimated(0,0,0,mBase.Width,mBase.Height)
 		
 		For Each v As B4XView In xclv_Main.GetPanel(Index).GetAllViewsRecursive
-			If v.Tag Is String And v.Tag = "xlbl_CollapsButton" Then 
+			If v.Tag Is String And v.Tag = "xlbl_CollapsButton" Then
 				xlbl_RootCollapsButton = v
 '			Else If v.Tag Is String And v.Tag = "xpnl_Seperator" Then
 '				v.Visible = False
@@ -670,10 +732,10 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		Dim RawListItem As CLVItem = xclv_Main.GetRawListItem(Index) 'Gets the raw list item
 		Dim Top As Float = (RawListItem.Offset - xclv_Main.sv.ScrollViewOffsetY) '+ RawListItem.Panel.Height 'Calculates the right top
 		If Top + Height > xpnl_SubItemBackground.Height Then 'If the menu no longer fits on the screen, display the menu above the list item
-			Top = Top - Height - 80dip + 20dip
+			Top = xpnl_SubItemBackground.Height - Height
 		End If
 		
-		Dim FinalListWidth As Float = mBase.Width-m_SideGap*2 + 5dip
+		Dim FinalListWidth As Float = mBase.Width-m_SideGap*2 + IIf(Index > 0,5dip,0)
 		
 		xpnl_SubItemListBase.SetLayoutAnimated(0,m_SideGap,Top,mBase.Width-m_SideGap*2,g_ItemProperties.Height)
 		xclv_SubItems.Base_Resize(FinalListWidth,Height)
@@ -685,7 +747,7 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		xpnl_Background.Color = m_BackgroundColor
 		xpnl_Background.AddView(xpnl_RootItemBackground,0,0,FinalListWidth,xpnl_SubItemListBase.Height)
 		
-		xclv_SubItems.Add(xpnl_Background,"")
+		xclv_SubItems.Add(xpnl_Background,Value)
 		
 		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
 			
@@ -696,10 +758,18 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 			xclv_SubItems.Add(xpnl_Background,SubItem)
 			
 		Next
+		
+		#If B4I or B4A
 		SetCircleClip(xpnl_SubItemListBase,m_CornerRadius)
+		#End If
+		
 		xpnl_SubItemBackground.Visible = True
-		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top - 10dip,FinalListWidth,Height)
-		xclv_Main.AsView.SetLayoutAnimated(200,5dip,xclv_Main.AsView.Top,xclv_Main.AsView.Width - 5dip,xclv_Main.AsView.Height)
+		If Index > 0 Then
+			xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top - 10dip,FinalListWidth,Height)
+			xclv_Main.AsView.SetLayoutAnimated(200,5dip,xclv_Main.AsView.Top,xclv_Main.AsView.Width - 5dip,xclv_Main.AsView.Height)
+		Else
+			xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,FinalListWidth,Height)
+		End If
 		xclv_SubItems.Refresh
 '		Sleep(200)
 '		SetCircleClip(xpnl_SubItemListBase,m_CornerRadius)
