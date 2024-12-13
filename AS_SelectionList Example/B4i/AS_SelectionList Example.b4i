@@ -6,11 +6,11 @@ Library1=b4xpages
 Library2=icore
 Library3=xcustomlistview
 Library4=xui views
-Module1=|relative|..\..\AS_SelectionList
-Module2=|relative|..\B4XMainPage
+Library5=as_selectionlist
+Module1=|relative|..\B4XMainPage
 NumberOfFiles=1
-NumberOfLibraries=4
-NumberOfModules=2
+NumberOfLibraries=5
+NumberOfModules=1
 Version=8.45
 @EndOfDesignText@
 'Code module

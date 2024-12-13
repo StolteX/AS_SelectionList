@@ -37,7 +37,7 @@ V1.06
 		-BeginWithText - The separator begins where the text begins
 		-FullWidth - Full width
 		-BeginWithIcon - The separator starts where the icon begins, if there is no icon, then where the text begins
-V2.00 (nicht veröffentlicht)
+V2.00
 	-BugFixes and Improvements
 	-Add AddSubItem
 	-Add Designer Property RootItemClickBehavior - What should happen if you click on the root item when the sub menu is open

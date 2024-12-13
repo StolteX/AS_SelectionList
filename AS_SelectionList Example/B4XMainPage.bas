@@ -32,46 +32,38 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	AS_SelectionList1.Theme = AS_SelectionList1.Theme_Dark
 	AS_SelectionList1.SideGap = 100dip
 	
-	AS_SelectionList1.MaxSelectionCount = 3
-'	For i = 0 To 80 -1
-'		'AS_SelectionList1.AddItem("Test " & (i+1),AS_SelectionList1.FontToBitmap(Chr(0xF179),False,30,xui.Color_Black),i)
-'		Dim RootItem As AS_SelectionList_Item = AS_SelectionList1.AddItem("Test " & (i+1),Null,i)
-'		'Dim RootItem As AS_SelectionList_Item = AS_SelectionList1.AddItem("Test " & (i+1),AS_SelectionList1.FontToBitmap(Chr(0xF179),False,25,xui.Color_White),i)
-'		
-'		For ii = 0 To Rnd(0,6) -1
-'			AS_SelectionList1.AddSubItem(RootItem,$"SubItem ${ii} from ${RootItem.Text} "$,Null,"Test" & i)
-'		Next
-'		
-'	Next
+'	AS_SelectionList1.MaxSelectionCount = 3
+	
+	'SubItems Example
+	Dim RootItem As AS_SelectionList_Item = AS_SelectionList1.AddItem("House", Null, "House")
+	AS_SelectionList1.AddSubItem(RootItem, "Living Room", Null, "LivingRoom")
+	AS_SelectionList1.AddSubItem(RootItem, "Bedroom", Null, "SleepingRoom")
+	AS_SelectionList1.AddSubItem(RootItem, "Kitchen", Null, "Kitchen")
+
+	Dim RootItem2 As AS_SelectionList_Item = AS_SelectionList1.AddItem("Car", Null, "Car")
+	AS_SelectionList1.AddSubItem(RootItem2, "Steering Wheel", Null, "Steeringwheel")
+	AS_SelectionList1.AddSubItem(RootItem2, "Air Conditioning", Null, "Climate")
+	AS_SelectionList1.AddSubItem(RootItem2, "Rearview Mirror", Null, "BackMirror")
+	AS_SelectionList1.AddSubItem(RootItem2, "Side Mirror", Null, "SideMirror")
+
+	Dim RootItem3 As AS_SelectionList_Item = AS_SelectionList1.AddItem("Clothes", Null, "Clothes")
+	AS_SelectionList1.AddSubItem(RootItem3, "T-Shirt", Null, "Shirt")
+	AS_SelectionList1.AddSubItem(RootItem3, "Hoodie", Null, "Hoodie")
+	AS_SelectionList1.AddSubItem(RootItem3, "Pants", Null, "Pants")
+	AS_SelectionList1.AddSubItem(RootItem3, "Socks", Null, "Socks")
+	AS_SelectionList1.AddSubItem(RootItem3, "Underpants", Null, "Underpants")
+
 	
 	
-	Dim RootItem As AS_SelectionList_Item = AS_SelectionList1.AddItem("Haus",Null,"House")
-	AS_SelectionList1.AddSubItem(RootItem,"Wohnzimmer",Null,"LivingRoom")
-	AS_SelectionList1.AddSubItem(RootItem,"Schlafzimmer",Null,"SleepingRoom")
-	AS_SelectionList1.AddSubItem(RootItem,"Kinderzimmer",Null,"ChildRoom")
-
-	Dim RootItem2 As AS_SelectionList_Item = AS_SelectionList1.AddItem("Auto",Null,"Car")
-	AS_SelectionList1.AddSubItem(RootItem2,"Lenkrad",Null,"Steeringwheel")
-	AS_SelectionList1.AddSubItem(RootItem2,"Klimaanlage",Null,"Climate")
-	AS_SelectionList1.AddSubItem(RootItem2,"Rückspiegel",Null,"BackMirror")
-	AS_SelectionList1.AddSubItem(RootItem2,"Seitespiegel",Null,"SideMirror")
-
-	Dim RootItem3 As AS_SelectionList_Item = AS_SelectionList1.AddItem("Klamotten",Null,"Clothes")
-	AS_SelectionList1.AddSubItem(RootItem3,"T-Shirt",Null,"Shirt")
-	AS_SelectionList1.AddSubItem(RootItem3,"Pullover",Null,"Hoodie")
-	AS_SelectionList1.AddSubItem(RootItem3,"Hose",Null,"Pants")
-	AS_SelectionList1.AddSubItem(RootItem3,"Socken",Null,"Socks")
-	AS_SelectionList1.AddSubItem(RootItem3,"Unterhose",Null,"Underpants")
-
-
 	
-'	Dim lst As List
-'	lst.Initialize
-'	lst.Add("SubTest2")
-'	'lst.Add(3)
-'	AS_SelectionList1.SetSelections2(lst)
-'	Sleep(4000)
-'	AS_SelectionList1.ClearSelections
+	For i = 0 To 80 -1
+		'AS_SelectionList1.AddItem("Test " & (i+1),AS_SelectionList1.FontToBitmap(Chr(0xF179),False,30,xui.Color_Black),i)
+		AS_SelectionList1.AddItem("Test " & (i+1),Null,i)	
+	Next
+	
+	
+
+
 End Sub
 
 

@@ -6,13 +6,12 @@ Group=Default Group
 Library1=b4xpages
 Library2=jcore
 Library3=jfx
-Library4=xcustomlistview
-Library5=xui views
-Module1=|relative|..\..\AS_SelectionList
-Module2=|relative|..\B4XMainPage
+Library4=xui views
+Library5=as_selectionlist
+Module1=|relative|..\B4XMainPage
 NumberOfFiles=1
 NumberOfLibraries=5
-NumberOfModules=2
+NumberOfModules=1
 Version=10
 @EndOfDesignText@
 #Region Project Attributes 
