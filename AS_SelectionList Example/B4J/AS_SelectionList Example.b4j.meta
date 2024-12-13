@@ -7,6 +7,6 @@ ModuleBreakpoints2=
 ModuleClosedNodes0=4
 ModuleClosedNodes1=
 ModuleClosedNodes2=1
-NavigationStack=AS_SelectionList,Class_Globals,65,0,AS_SelectionList,setCornerRadius,524,3,AS_SelectionList,AddSubItem,330,0,AS_SelectionList,ClearSelections,403,0,AS_SelectionList,getSelectedSubItemPropertiess,552,0,AS_SelectionList,FillSelectionMap,620,0,AS_SelectionList,ClearListIntern,572,0,AS_SelectionList,xpnl_SubItemBackground_MouseClicked,791,0,AS_SelectionList,SetSelections2,445,0,AS_SelectionList,CloseSubMenu,446,0,AS_SelectionList,xclv_Main_ItemClick,928,0
+NavigationStack=B4XMainPage,xtf_Search_TextChanged,72,0,AS_SelectionList,SearchByValue,405,2,AS_SelectionList,SearchByText,377,6,B4XMainPage,B4XPage_Created,59,6,AS_SelectionList,SetPanelCornerRadius,1235,0,AS_SelectionList,BuildItem,778,6,Visual Designer,frm_main.bjl,-100,2,AS_SelectionList,xclv_Main_ItemClick,981,6,AS_SelectionList,ItemClickIntern,1022,0,AS_SelectionList,CloseSubMenu,484,6
 SelectedBuild=0
 VisibleModules=2,1

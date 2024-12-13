@@ -46,8 +46,6 @@ V2.00 (nicht veröffentlicht)
 	-Add Type AS_SelectionList_SubItemProperties
 	-Add Type AS_SelectionList_SelectedSubItemProperties
 	-Add get and set CornerRadius - First and Last Item corner radius
-	
-	'Todo: SearchBy
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -102,6 +100,9 @@ Sub Class_Globals
 	Private m_MaxSelectionCount As Int = 0
 	Private m_HapticFeedback As Boolean
 	Private m_isSubMenuOpen As Boolean = False
+	Private m_isInSearchMode As Boolean = False
+	Private m_SearchByText As String = ""
+	Private m_SearchByObject As Object = Null
 	
 	'***SubItems***
 	Private xpnl_SubItemBackground As B4XView
@@ -361,6 +362,13 @@ Public Sub RebuildList
 End Sub
 
 Public Sub SearchByText(Text As String)
+	m_SearchByText = Text
+	If Text.Trim = "" Then
+		ClearSearch
+		Return
+	End If
+	
+	m_isInSearchMode = True
 	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
 	xiv_RefreshImage.SetVisibleAnimated(0,True)
 	Sleep(0)
@@ -369,7 +377,17 @@ Public Sub SearchByText(Text As String)
 	xclv_SubItems.Clear
 	m_DataMap.Values.Sort(True)
 	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
-		If Item.Text.ToLowerCase.Contains(Text.ToLowerCase) Then AddItemIntern(Item,False)
+		
+		Dim SearchValueFound As Boolean = False
+		Dim lstSubItems As List = m_SubDataMap.Get(Item)
+		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+			If (m_SearchByText <> "" And SubItem.Text.ToLowerCase.Contains(m_SearchByText.ToLowerCase)) Then
+				SearchValueFound = True
+				Exit
+			End If
+		Next
+		
+		If Item.Text.ToLowerCase.Contains(Text.ToLowerCase) Or SearchValueFound Then AddItemIntern(Item,False)
 	Next
 	
 	Sleep(0)
@@ -377,6 +395,8 @@ Public Sub SearchByText(Text As String)
 End Sub
 
 Public Sub SearchByValue(Value As Object)
+	m_SearchByObject = Value
+	m_isInSearchMode = True
 	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
 	xiv_RefreshImage.SetVisibleAnimated(0,True)
 	Sleep(0)
@@ -385,7 +405,17 @@ Public Sub SearchByValue(Value As Object)
 	xclv_SubItems.Clear
 	m_DataMap.Values.Sort(True)
 	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
-		If Item.Value = Value Then AddItemIntern(Item,False)
+		
+		Dim SearchValueFound As Boolean = False
+		Dim lstSubItems As List = m_SubDataMap.Get(Item)
+		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+			If (m_SearchByObject <> Null And m_SearchByObject = SubItem.Value) Then
+				SearchValueFound = True
+				Exit
+			End If
+		Next
+		
+		If Item.Value = Value Or SearchValueFound Then AddItemIntern(Item,False)
 	Next
 	
 	Sleep(0)
@@ -393,6 +423,9 @@ Public Sub SearchByValue(Value As Object)
 End Sub
 
 Public Sub ClearSearch
+	m_SearchByText = ""
+	m_SearchByObject = Null
+	m_isInSearchMode = False
 	RebuildList
 End Sub
 
@@ -455,10 +488,11 @@ Public Sub CloseSubMenu
 	If m_isSubMenuOpen = False Then Return
 
 	If xpnl_SubItemListBase.Top > 0 Then
-		xclv_Main.AsView.SetLayoutAnimated(200,0,xclv_Main.AsView.Top,xclv_Main.AsView.Width + 5dip,xclv_Main.AsView.Height)
-		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top + 10dip,xpnl_SubItemListBase.Width - 5dip,g_ItemProperties.Height)
+		SetLayoutAnimated(xclv_Main.AsView,200,0,xclv_Main.AsView.Top,xclv_Main.AsView.Width + 5dip,xclv_Main.AsView.Height)
+		SetLayoutAnimated(xlbl_RootCheckItem,200,xpnl_SubItemListBase.Width - 5dip - xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
+		SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top + 10dip,xpnl_SubItemListBase.Width - 5dip,g_ItemProperties.Height)
 	Else
-		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,xpnl_SubItemListBase.Width,g_ItemProperties.Height)
+		SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,xpnl_SubItemListBase.Width,g_ItemProperties.Height)
 	End If
 
 	xlbl_RootCollapsButton.SetRotationAnimated(200,0)
@@ -471,6 +505,12 @@ Public Sub CloseSubMenu
 	xpnl_RootItemBackground.SendToBack
 	xclv_SubItems.Clear
 	m_isSubMenuOpen = False
+
+	Dim CurrentIndex As Int = xclv_Main.GetItemFromView(xpnl_RootClvPanelBackground)
+	If CurrentIndex = 0 Or CurrentIndex = (xclv_Main.Size -1) Then 'Runde Ecken beim 1. und letzten item
+		xpnl_RootItemBackground.SetColorAndBorder(xpnl_RootItemBackground.Color,0,0,m_CornerRadius)
+		SetPanelCornerRadius(xpnl_RootItemBackground,m_CornerRadius,IIf(CurrentIndex = 0,True,False),IIf(CurrentIndex = 0,True,False),IIf(CurrentIndex = (xclv_Main.Size -1),True,False),IIf(CurrentIndex = (xclv_Main.Size -1),True,False))
+	End If
 
 End Sub
 
@@ -771,7 +811,22 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xlbl_ItemText.Left - xlbl_CheckItem.Width
 	End If
 		
-	xlbl_CollapsButton.Visible = m_SubDataMap.ContainsKey(Item)
+	If m_isInSearchMode And Item Is AS_SelectionList_Item Then
+		
+		Dim SearchValueFound As Boolean = False
+		
+		Dim lstSubItems As List = m_SubDataMap.Get(Item)
+		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+			If (m_SearchByText <> "" And SubItem.Text.ToLowerCase.Contains(m_SearchByText.ToLowerCase)) Or (m_SearchByObject <> Null And m_SearchByObject = SubItem.Value) Then
+				SearchValueFound = True
+				Exit
+			End If
+		Next
+		
+		xlbl_CollapsButton.Visible = SearchValueFound
+	Else
+		xlbl_CollapsButton.Visible = m_SubDataMap.ContainsKey(Item)
+	End If
 	
 	If xclv = xclv_SubItems And m_isSubMenuOpen And xpnl_RootClvPanelBackground.Tag = Item Then
 		xlbl_CollapsButton.SetRotationAnimated(0,90)
@@ -794,7 +849,7 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	
 	If Item Is AS_SelectionList_Item And m_SubDataMap.ContainsKey(Item) Then
 		
-		Dim lstSubItems As List = m_SubDataMap.Get(Item)			
+		Dim lstSubItems As List = m_SubDataMap.Get(Item)
 		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
 				
 			If m_SelectionMap.ContainsKey(SubItem) Then
@@ -879,18 +934,7 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		
 		'Dim MaxVisibleItems As Int = Ceil(g_ItemProperties.Height/lstSubItems.Size)
 		
-		Dim Height As Float = g_ItemProperties.Height*(lstSubItems.Size+1) 'Action Menu Height
-   
-		Dim RawListItem As CLVItem = xclv_Main.GetRawListItem(Index) 'Gets the raw list item
-		Dim Top As Float = (RawListItem.Offset - xclv_Main.sv.ScrollViewOffsetY) '+ RawListItem.Panel.Height 'Calculates the right top
-		If Top + Height > xpnl_SubItemBackground.Height Then 'If the menu no longer fits on the screen, display the menu above the list item
-			Top = xpnl_SubItemBackground.Height - Height
-		End If
-		
 		Dim FinalListWidth As Float = mBase.Width-m_SideGap*2 + IIf(Index > 0,5dip,0)
-		
-		xpnl_SubItemListBase.SetLayoutAnimated(0,m_SideGap,Top,mBase.Width-m_SideGap*2,g_ItemProperties.Height)
-		xclv_SubItems.Base_Resize(FinalListWidth,Height)
 		
 		xpnl_RootItemBackground.RemoveViewFromParent
 		
@@ -903,27 +947,46 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		
 		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
 			
+			If m_isInSearchMode And (m_SearchByText <> "" And SubItem.Text.ToLowerCase.Contains(m_SearchByText.ToLowerCase)) Or (m_SearchByObject <> Null And m_SearchByObject = SubItem.Value) Then
+				
+			Else if m_isInSearchMode Then
+				Continue
+			End If
+			
 			Dim xpnl_Background As B4XView = xui.CreatePanel("")
 			xpnl_Background.SetLayoutAnimated(0,0,0,FinalListWidth,g_ItemProperties.Height)
 			xpnl_Background.Color = m_BackgroundColor
 	
 			xclv_SubItems.Add(xpnl_Background,SubItem)
-			
+				
 		Next
+		
+		Dim Height As Float = g_ItemProperties.Height*(xclv_SubItems.Size) 'Action Menu Height
+   
+		Dim RawListItem As CLVItem = xclv_Main.GetRawListItem(Index) 'Gets the raw list item
+		Dim Top As Float = (RawListItem.Offset - xclv_Main.sv.ScrollViewOffsetY) '+ RawListItem.Panel.Height 'Calculates the right top
+		If Top + Height > xpnl_SubItemBackground.Height Then 'If the menu no longer fits on the screen, display the menu above the list item
+			Top = xpnl_SubItemBackground.Height - Height
+		End If
+		
+		xpnl_SubItemListBase.SetLayoutAnimated(0,m_SideGap,Top,mBase.Width-m_SideGap*2,g_ItemProperties.Height)
+		xclv_SubItems.Base_Resize(FinalListWidth,Height)
 		
 		#If B4I or B4A
 		SetCircleClip(xpnl_SubItemListBase,m_CornerRadius)
 		#End If
 		
+		SetPanelCornerRadius(xpnl_RootItemBackground,0,True,True,True,True)
+		
 		xpnl_SubItemBackground.Visible = True
 		xpnl_SubItemBackground.SetColorAnimated(200,xpnl_SubItemBackground.Color,xui.Color_ARGB(100,0,0,0))
 		If Index > 0 Then
-			xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top - 10dip,FinalListWidth,Height)
-			xclv_Main.AsView.SetLayoutAnimated(200,5dip,xclv_Main.AsView.Top,xclv_Main.AsView.Width - 5dip,xclv_Main.AsView.Height)
+			SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top - 10dip,FinalListWidth,Height)
+			SetLayoutAnimated(xclv_Main.AsView,200,5dip,xclv_Main.AsView.Top,xclv_Main.AsView.Width - 5dip,xclv_Main.AsView.Height)
 		Else
-			xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,FinalListWidth,Height)
+			SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,FinalListWidth,Height)
 		End If
-		xlbl_RootCheckItem.SetLayoutAnimated(200,FinalListWidth - xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
+		SetLayoutAnimated(xlbl_RootCheckItem,200,FinalListWidth - xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
 		xclv_SubItems.Refresh
 '		Sleep(200)
 '		SetCircleClip(xpnl_SubItemListBase,m_CornerRadius)
@@ -1209,6 +1272,25 @@ Private Sub SetPanelCornerRadius(View As B4XView, CornerRadius As Float,TopLeft 
 	Corners = Corners & IIf(BottomRight, CornerRadius, 0)
 	CSSUtils.SetStyleProperty(View, "-fx-background-radius", Corners)
     #End If
+End Sub
+
+Private Sub SetLayoutAnimated(v As B4XView,Duration As Int, Left As Int,Top As Int,Width As Int,Height As Int)
+	#If B4A
+	v.SetLayoutAnimated(Duration,Left,Top,Width,v.Height)
+	Dim startTime As Long = DateTime.Now
+	Dim startHeight As Int = v.Height
+	Dim deltaHeight As Int = Height - startHeight
+	Dim t As Long = DateTime.Now
+	Do While t < startTime + Duration
+		Dim h As Int = startHeight + deltaHeight * (t - startTime) / Duration
+		v.Height = h
+		Sleep(10)
+		t = DateTime.Now
+	Loop
+	v.Height = Height
+	#Else
+	v.SetLayoutAnimated(Duration,Left,Top,Width,Height)
+	#End If
 End Sub
 
 #End Region
