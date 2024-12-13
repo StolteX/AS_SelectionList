@@ -38,11 +38,21 @@ V1.06
 		-FullWidth - Full width
 		-BeginWithIcon - The separator starts where the icon begins, if there is no icon, then where the text begins
 V2.00 (nicht veröffentlicht)
-	-Improvements
+	-BugFixes and Improvements
+	-Add AddSubItem
+	-Add Designer Property RootItemClickBehavior - What should happen if you click on the root item when the sub menu is open
+		-Default: CloseSubMenu
+	-Add Type AS_SelectionList_SubItem
+	-Add Type AS_SelectionList_SubItemProperties
+	-Add Type AS_SelectionList_SelectedSubItemProperties
+	-Add get and set CornerRadius - First and Last Item corner radius
+	
+	'Todo: SearchBy
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
 #DesignerProperty: Key: SelectionMode, DisplayName: SelectionMode, FieldType: String, DefaultValue: Single, List: Single|Multi
+#DesignerProperty: Key: RootItemClickBehavior, DisplayName: RootItemClickBehavior, FieldType: String, DefaultValue: CloseSubMenu, List: CloseSubMenu|SelectRootItem|SelectAllSubItems
 #DesignerProperty: Key: CanDeselect, DisplayName: CanDeselect, FieldType: Boolean, DefaultValue: True , Description: If true, then the user can remove the selection by clicking again
 #DesignerProperty: Key: HapticFeedback, DisplayName: HapticFeedback, FieldType: Boolean, DefaultValue: True
 
@@ -83,6 +93,7 @@ Sub Class_Globals
 	Private m_CornerRadius As Float = 10dip
 	Private m_SideGap As Float = 10dip
 	Private m_SelectionMode As String
+	Private m_RootItemClickBehavior As String
 	Private m_CanDeselect As Boolean
 	Private m_BackgroundColor As Int
 	Private m_ThemeChangeTransition As String
@@ -240,6 +251,7 @@ Private Sub IniProps(Props As Map)
 	m_ThemeChangeTransition = Props.GetDefault("ThemeChangeTransition","Fade")
 	m_BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("BackgroundColor",0xFFFFFFFF))
 	m_SelectionMode = Props.GetDefault("SelectionMode","Single")
+	m_RootItemClickBehavior = Props.GetDefault("RootItemClickBehavior","CloseSubMenu")
 	m_CanDeselect = Props.GetDefault("CanDeselect",True)
 	m_ShowSeperators = Props.GetDefault("ShowSeperators",True)
 	m_HapticFeedback = Props.GetDefault("HapticFeedback",True)
@@ -326,17 +338,6 @@ Public Sub AddSubItem(RootItem As AS_SelectionList_Item,Text As String,Icon As B
 	
 End Sub
 
-Private Sub AddItemIntern(Item As AS_SelectionList_Item,Add2DataMap As Boolean)
-
-	Dim xpnl_Background As B4XView = xui.CreatePanel("")
-	xpnl_Background.SetLayoutAnimated(0,0,0,mBase.Width,g_ItemProperties.Height)
-	xpnl_Background.Color = m_BackgroundColor
-	
-	If Add2DataMap Then m_DataMap.Put(Item,xclv_Main.Size)
-	xclv_Main.Add(xpnl_Background,Item)
-	
-End Sub
-
 Public Sub Clear
 	xclv_Main.Clear
 	xclv_SubItems.Clear
@@ -401,20 +402,13 @@ Public Sub ClearSelections
 	Sleep(0)
 	
 	m_SelectionMap.Clear
-	ClearListIntern(xclv_Main)
-	ClearListIntern(xclv_SubItems)
+	ClearListIntern(xclv_Main,False)
+	ClearListIntern(xclv_SubItems,False)
 	SelectionChanged
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
 	
-End Sub
-
-Private Sub ClearListIntern(xclv As CustomListView)
-	For i = 0 To xclv.Size -1
-		xclv.GetPanel(i).RemoveAllViews
-	Next
-	xclv.Refresh
 End Sub
 
 '<code>
@@ -457,64 +451,49 @@ Public Sub SetSelections2(Values As List)
 	SetSelectionIntern(tmpMap)
 End Sub
 
-Private Sub SetSelectionIntern(Values As Map)
-	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
-	xiv_RefreshImage.SetVisibleAnimated(0,True)
-	Sleep(0)
+Public Sub CloseSubMenu
+	If m_isSubMenuOpen = False Then Return
+
+	If xpnl_SubItemListBase.Top > 0 Then
+		xclv_Main.AsView.SetLayoutAnimated(200,0,xclv_Main.AsView.Top,xclv_Main.AsView.Width + 5dip,xclv_Main.AsView.Height)
+		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top + 10dip,xpnl_SubItemListBase.Width - 5dip,g_ItemProperties.Height)
+	Else
+		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,xpnl_SubItemListBase.Width,g_ItemProperties.Height)
+	End If
+
+	xlbl_RootCollapsButton.SetRotationAnimated(200,0)
+	xpnl_SubItemBackground.SetColorAnimated(200,xpnl_SubItemBackground.Color,xui.Color_Transparent)
+	Sleep(200)
+	xpnl_SubItemBackground.Visible = False
 	
-	m_SelectionMap.Clear
-	FillSelectionMap(xclv_Main,m_DataMap,Values)
-	FillSelectionMap(xclv_SubItems,m_SubDataMap,Values)
+	xpnl_RootItemBackground.RemoveViewFromParent
+	xpnl_RootClvPanelBackground.AddView(xpnl_RootItemBackground,m_SideGap,0,mBase.Width-m_SideGap*2,xpnl_RootItemBackground.Height)
+	xpnl_RootItemBackground.SendToBack
+	xclv_SubItems.Clear
+	m_isSubMenuOpen = False
 
-	Sleep(0)
-	xiv_RefreshImage.SetVisibleAnimated(0,False)
-End Sub
-
-Private Sub FillSelectionMap(xclv As CustomListView,DataMap As B4XOrderedMap,Values As Map)
-
-
-	For Each Item As AS_SelectionList_Item In DataMap.Keys
-		
-		If DataMap.Get(Item) Is List Then
-			Dim lstSubItems As List = DataMap.Get(Item)
-			
-			For Each SubItem As AS_SelectionList_SubItem In lstSubItems
-				
-				For Each SetValue As Object In Values.Keys
-					If SetValue.As(String) = SubItem.Value.As(String) Then
-						m_SelectionMap.Put(SubItem,"")
-					End If
-				Next
-				
-'				If Values.ContainsKey(SubItem.Value) Then
-'					m_SelectionMap.Put(SubItem,"")
-'				End If
-			Next
-			
-		Else
-			
-			For Each SetValue As Object In Values.Keys
-				If SetValue.As(String) = Item.Value.As(String) Then
-					m_SelectionMap.Put(Item,"")
-				End If
-			Next
-			
-'			If Values.ContainsKey(Item.Value) Then
-'				m_SelectionMap.Put(Item,"")
-'			End If
-		End If
-
-	Next
-	
-	For i = 0 To xclv.Size -1
-		xclv.GetPanel(i).RemoveAllViews
-	Next
-	xclv.Refresh
 End Sub
 
 #End Region
 
 #Region Properties
+
+Public Sub setCornerRadius(CornerRadius As Float)
+	m_CornerRadius = CornerRadius
+End Sub
+
+Public Sub getCornerRadius As Float
+	Return m_CornerRadius
+End Sub
+
+'<code>AS_SelectionList1.RootItemClickBehavior = AS_SelectionList1.RootItemClickBehavior_CloseSubMenu</code>
+Public Sub setRootItemClickBehavior(RootItemClickBehavior As String)
+	m_RootItemClickBehavior = RootItemClickBehavior
+End Sub
+
+Public Sub getRootItemClickBehavior As String
+	Return m_RootItemClickBehavior
+End Sub
 
 'Default: 10dip
 Public Sub setSideGap(SideGap As Float)
@@ -571,6 +550,9 @@ Public Sub setBackgroundColor(BackgroundColor As Int)
 	xclv_Main.AsView.Color = BackgroundColor
 	xclv_Main.sv.ScrollViewInnerPanel.Color = BackgroundColor
 	xclv_Main.GetBase.Color = BackgroundColor
+	xclv_SubItems.AsView.Color = BackgroundColor
+	xclv_SubItems.sv.ScrollViewInnerPanel.Color = BackgroundColor
+	xclv_SubItems.GetBase.Color = BackgroundColor
 End Sub
 
 Public Sub getBackgroundColor As Int
@@ -599,10 +581,81 @@ End Sub
 
 #Region InternFunctions
 
+Private Sub AddItemIntern(Item As AS_SelectionList_Item,Add2DataMap As Boolean)
+
+	Dim xpnl_Background As B4XView = xui.CreatePanel("")
+	xpnl_Background.SetLayoutAnimated(0,0,0,mBase.Width,g_ItemProperties.Height)
+	xpnl_Background.Color = m_BackgroundColor
+	
+	If Add2DataMap Then m_DataMap.Put(Item,xclv_Main.Size)
+	xclv_Main.Add(xpnl_Background,Item)
+	
+End Sub
+
+Private Sub ClearListIntern(xclv As CustomListView,SkipSubMenuItem As Boolean)
+	For i = 0 To xclv.Size -1
+		
+		If SkipSubMenuItem And xclv.GetValue(i) = xpnl_RootClvPanelBackground.Tag Then Continue
+		
+		xclv.GetPanel(i).RemoveAllViews
+	Next
+	xclv.Refresh
+End Sub
+
+Private Sub SetSelectionIntern(Values As Map)
+	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
+	xiv_RefreshImage.SetVisibleAnimated(0,True)
+	Sleep(0)
+	
+	m_SelectionMap.Clear
+	FillSelectionMap(xclv_Main,m_DataMap,Values)
+	FillSelectionMap(xclv_SubItems,m_SubDataMap,Values)
+
+	Sleep(0)
+	xiv_RefreshImage.SetVisibleAnimated(0,False)
+End Sub
+
+Private Sub FillSelectionMap(xclv As CustomListView,DataMap As B4XOrderedMap,Values As Map)
+
+
+	For Each Item As AS_SelectionList_Item In DataMap.Keys
+		
+		If DataMap.Get(Item) Is List Then
+			Dim lstSubItems As List = DataMap.Get(Item)
+			
+			For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+				
+				For Each SetValue As Object In Values.Keys
+					If SetValue.As(String) = SubItem.Value.As(String) Then
+						m_SelectionMap.Put(SubItem,"")
+					End If
+				Next
+				
+			Next
+			
+		Else
+			
+			For Each SetValue As Object In Values.Keys
+				If SetValue.As(String) = Item.Value.As(String) Then
+					m_SelectionMap.Put(Item,"")
+				End If
+			Next
+			
+		End If
+
+	Next
+	
+	For i = 0 To xclv.Size -1
+		xclv.GetPanel(i).RemoveAllViews
+	Next
+	xclv.Refresh
+End Sub
+
 Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomListView)
 	
+	Dim CurrentIndex As Int = xclv.GetItemFromView(xpnl_Background)
 	Dim SideGap As Float = IIf(xclv = xclv_Main,m_SideGap,0)
-	Dim ItemWidth As Float = IIf(xclv = xclv_Main,mBase.Width - SideGap*2,xclv_SubItems.AsView.Width + 6dip)
+	Dim ItemWidth As Float = IIf(xclv = xclv_Main,mBase.Width - SideGap*2,mBase.Width-m_SideGap*2 + IIf(CurrentIndex > 0,5dip,0))
 	Dim CheckItemWidth As Float = 40dip
 	
 	Dim Text As String
@@ -693,7 +746,6 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 		xiv_Icon.SetBitmap(Icon)
 	End If
 	
-	Dim CurrentIndex As Int = xclv.GetItemFromView(xpnl_Background)
 	xpnl_Seperator.Visible = m_ShowSeperators And CurrentIndex > 0
 
 	If CurrentIndex = 0 Or CurrentIndex = (xclv.Size -1) Then 'Runde Ecken beim 1. und letzten item
@@ -770,29 +822,6 @@ Private Sub xpnl_SubItemBackground_Click
 	
 End Sub
 
-Public Sub CloseSubMenu
-	If m_isSubMenuOpen = False Then Return
-
-	If xpnl_SubItemListBase.Top > 0 Then
-		xclv_Main.AsView.SetLayoutAnimated(200,0,xclv_Main.AsView.Top,xclv_Main.AsView.Width + 5dip,xclv_Main.AsView.Height)
-		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top + 10dip,xpnl_SubItemListBase.Width - 5dip,g_ItemProperties.Height)
-	Else
-		xpnl_SubItemListBase.SetLayoutAnimated(200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,xpnl_SubItemListBase.Width,g_ItemProperties.Height)
-	End If
-
-	xlbl_RootCollapsButton.SetRotationAnimated(200,0)
-	xpnl_SubItemBackground.SetColorAnimated(200,xpnl_SubItemBackground.Color,xui.Color_Transparent)
-	Sleep(200)
-	xpnl_SubItemBackground.Visible = False
-	
-	xpnl_RootItemBackground.RemoveViewFromParent
-	xpnl_RootClvPanelBackground.AddView(xpnl_RootItemBackground,m_SideGap,0,mBase.Width-m_SideGap*2,xpnl_RootItemBackground.Height)
-	xpnl_RootItemBackground.SendToBack
-	xclv_SubItems.Clear
-	m_isSubMenuOpen = False
-
-End Sub
-
 Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 	
 	Dim xclv As CustomListView = Sender
@@ -800,7 +829,28 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 	If m_SubDataMap.ContainsKey(Value) Then
 		
 		If m_isSubMenuOpen Then
-			CloseSubMenu
+			
+			Select m_RootItemClickBehavior
+				Case getRootItemClickBehavior_CloseSubMenu
+					CloseSubMenu
+				Case getRootItemClickBehavior_SelectAllSubItems
+					
+					'Select all sub items from the root item, unless all are already selected, then deselect all
+					Dim lstSubItems As List = m_SubDataMap.Get(Value)
+					Dim IndexCounter As Int = 0
+					For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+						ItemClickIntern(SubItem,IndexCounter+1,xclv_SubItems,False)
+						IndexCounter = IndexCounter +1
+					Next
+					
+					SelectionChanged
+					
+				Case getRootItemClickBehavior_SelectRootItem
+					
+					ItemClickIntern(Value,0,xclv_SubItems,True)
+					
+			End Select
+			
 			Return
 		End If
 		
@@ -881,63 +931,79 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 			
 		
 			
-		ItemClickIntern(Value,Index,xclv)
+		ItemClickIntern(Value,Index,xclv,True)
 		
 	End If
 
 End Sub
 
-Private Sub ItemClickIntern(ThisItem As Object,Index As Int,xclv As CustomListView)
+Private Sub ItemClickIntern(ThisItem As Object,Index As Int,xclv As CustomListView,WithEvent As Boolean)
 	Dim isSubMenuOpen As Boolean = m_isSubMenuOpen
 	If m_SelectionMap.ContainsKey(ThisItem) And m_CanDeselect Then
 		m_SelectionMap.Remove(ThisItem)
 		HandleSelection(xclv.GetPanel(Index),xclv)
-		SelectionChanged
+		If WithEvent Then SelectionChanged
 	Else If m_SelectionMap.ContainsKey(ThisItem) = False Then
 		
 		If m_SelectionMode = "Single" Then
-			For i = 0 To xclv.size -1
-				If m_SelectionMap.ContainsKey(xclv.GetValue(i)) Then
-					m_SelectionMap.Clear
-					HandleSelection(xclv.GetPanel(i),xclv)
-					Exit
-				End If
-			Next
+			
+			If m_SelectionMap.Size > 0 Then
+				m_SelectionMap.Clear
+				ClearListIntern(xclv_Main,True)
+				ClearListIntern(xclv_SubItems,True)
+			End If
+			
+'			For i = 0 To xclv.size -1
+'				If m_SelectionMap.ContainsKey(xclv.GetValue(i)) Then
+'					m_SelectionMap.Clear
+'					ClearListIntern(xclv_Main)
+'					ClearListIntern(xclv_SubItems)
+'					Exit
+'				End If
+'			Next
 			m_SelectionMap.Put(ThisItem,Index)
 			HandleSelection(xclv.GetPanel(Index),xclv)
-			SelectionChanged
+			If WithEvent Then SelectionChanged
 			If m_isSubMenuOpen Then CloseSubMenu
 		Else If m_SelectionMode = "Multi" Then
 			If m_MaxSelectionCount > 0 And m_MaxSelectionCount = m_SelectionMap.Size Then Return
 			m_SelectionMap.Put(ThisItem,Index)
 			HandleSelection(xclv.GetPanel(Index),xclv)
-			SelectionChanged
+			If WithEvent Then SelectionChanged
 		End If
 		
 	End If
 	
 	If isSubMenuOpen Then
 
-		Dim Item As AS_SelectionList_Item = xpnl_RootClvPanelBackground.Tag
-		If Item Is AS_SelectionList_Item And m_SubDataMap.ContainsKey(Item) Then
-		
-			Dim lstSubItems As List = m_SubDataMap.Get(Item)
-			For Each SubItem As AS_SelectionList_SubItem In lstSubItems
-				
-				If m_SelectionMap.ContainsKey(SubItem) Then
-					xlbl_RootCheckItem.TextColor = g_SelectedItemProperties.TextColor
-					xlbl_RootCheckItem.Text = Chr(0xE15B)
-					Exit
-				Else
-					xlbl_RootCheckItem.Text = ""
-				End If
-			
-			Next
-		
-		End If
+		RefreshRootItem
 		
 	End If
 	
+End Sub
+
+Private Sub RefreshRootItem
+	Dim Item As AS_SelectionList_Item = xpnl_RootClvPanelBackground.Tag
+	If Item Is AS_SelectionList_Item And m_SubDataMap.ContainsKey(Item) Then
+		
+		Dim lstSubItems As List = m_SubDataMap.Get(Item)
+		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+				
+			If m_SelectionMap.ContainsKey(SubItem) Then
+				xlbl_RootCheckItem.TextColor = g_SelectedItemProperties.TextColor
+				xlbl_RootCheckItem.Text = Chr(0xE15B)
+				Exit
+			else If m_SelectionMap.ContainsKey(Item) Then
+				xlbl_RootCheckItem.TextColor = g_SelectedItemProperties.TextColor
+				xlbl_RootCheckItem.Text = Chr(0xE5CA)
+				Exit
+			Else
+				xlbl_RootCheckItem.Text = ""
+			End If
+			
+		Next
+		
+	End If
 End Sub
 
 Private Sub HandleSelection(xpnl_Background As B4XView,xclv As CustomListView)
@@ -1011,6 +1077,20 @@ End Sub
 Public Sub getSeperatorWidth_FullWidth As String
 	Return "FullWidth"
 End Sub
+
+Public Sub getRootItemClickBehavior_CloseSubMenu As String
+	Return "CloseSubMenu"
+End Sub
+
+Public Sub getRootItemClickBehavior_SelectRootItem As String
+	Return "SelectRootItem"
+End Sub
+
+'Takes into account the SelectionMode and MaxSelectionCount
+Public Sub getRootItemClickBehavior_SelectAllSubItems As String
+	Return "SelectAllSubItems"
+End Sub
+
 
 #End Region
 
