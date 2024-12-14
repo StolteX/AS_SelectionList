@@ -54,15 +54,10 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	AS_SelectionList1.AddSubItem(RootItem3, "Underpants", Null, "Underpants")
 
 	
-	
-	
 	For i = 0 To 80 -1
 		'AS_SelectionList1.AddItem("Test " & (i+1),AS_SelectionList1.FontToBitmap(Chr(0xF179),False,30,xui.Color_Black),i)
-		AS_SelectionList1.AddItem("Test " & (i+1),Null,i)	
+		AS_SelectionList1.AddItem("Test " & (i+1),Null,i)
 	Next
-	
-	
-
 
 End Sub
 

@@ -4,6 +4,6 @@ ModuleBreakpoints0=
 ModuleBreakpoints1=
 ModuleClosedNodes0=4
 ModuleClosedNodes1=1
-NavigationStack=B4XMainPage,B4XPage_Created,20,1,Main,Process_Globals,13,0,B4XMainPage,Initialize,14,0
+NavigationStack=Main,Process_Globals,13,0,B4XMainPage,Initialize,16,0,Visual Designer,frm_main.bil,-100,6,B4XMainPage,B4XPage_Created,31,6
 SelectedBuild=0
 VisibleModules=1

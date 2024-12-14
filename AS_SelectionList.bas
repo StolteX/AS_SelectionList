@@ -46,6 +46,8 @@ V2.00
 	-Add Type AS_SelectionList_SubItemProperties
 	-Add Type AS_SelectionList_SelectedSubItemProperties
 	-Add get and set CornerRadius - First and Last Item corner radius
+V2.01
+	-Search BugFix
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -379,13 +381,15 @@ Public Sub SearchByText(Text As String)
 	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
 		
 		Dim SearchValueFound As Boolean = False
-		Dim lstSubItems As List = m_SubDataMap.Get(Item)
-		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
-			If (m_SearchByText <> "" And SubItem.Text.ToLowerCase.Contains(m_SearchByText.ToLowerCase)) Then
-				SearchValueFound = True
-				Exit
-			End If
-		Next
+		If m_SubDataMap.ContainsKey(Item) Then
+			Dim lstSubItems As List = m_SubDataMap.Get(Item)
+			For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+				If (m_SearchByText <> "" And SubItem.Text.ToLowerCase.Contains(m_SearchByText.ToLowerCase)) Then
+					SearchValueFound = True
+					Exit
+				End If
+			Next
+		End If
 		
 		If Item.Text.ToLowerCase.Contains(Text.ToLowerCase) Or SearchValueFound Then AddItemIntern(Item,False)
 	Next
@@ -407,13 +411,15 @@ Public Sub SearchByValue(Value As Object)
 	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
 		
 		Dim SearchValueFound As Boolean = False
-		Dim lstSubItems As List = m_SubDataMap.Get(Item)
-		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
-			If (m_SearchByObject <> Null And m_SearchByObject = SubItem.Value) Then
-				SearchValueFound = True
-				Exit
-			End If
-		Next
+		If m_SubDataMap.ContainsKey(Item) Then
+			Dim lstSubItems As List = m_SubDataMap.Get(Item)
+			For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+				If (m_SearchByObject <> Null And m_SearchByObject = SubItem.Value) Then
+					SearchValueFound = True
+					Exit
+				End If
+			Next
+		End If
 		
 		If Item.Value = Value Or SearchValueFound Then AddItemIntern(Item,False)
 	Next
