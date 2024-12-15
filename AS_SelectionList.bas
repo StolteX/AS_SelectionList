@@ -641,7 +641,7 @@ End Sub
 Private Sub ClearListIntern(xclv As CustomListView,SkipSubMenuItem As Boolean)
 	For i = 0 To xclv.Size -1
 		
-		If SkipSubMenuItem And xclv.GetValue(i) = xpnl_RootClvPanelBackground.Tag Then Continue
+		If SkipSubMenuItem and xpnl_RootClvPanelBackground.IsInitialized And xclv.GetValue(i) = xpnl_RootClvPanelBackground.Tag Then Continue
 		
 		xclv.GetPanel(i).RemoveAllViews
 	Next
