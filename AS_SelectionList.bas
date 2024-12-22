@@ -48,10 +48,18 @@ V2.00
 	-Add get and set CornerRadius - First and Last Item corner radius
 V2.01
 	-Search BugFix
+V2.02
+	-New SelectionIconAlignment - Alignment of the check icon of an item when it is selected
+		-Default: Right
+		-Left or Right
+	-New Designer Property SelectionIconAlignment
+		-Default: Right
+	-New get and set ShowSeperators
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
 #DesignerProperty: Key: SelectionMode, DisplayName: SelectionMode, FieldType: String, DefaultValue: Single, List: Single|Multi
+#DesignerProperty: Key: SelectionIconAlignment, DisplayName: SelectionIconAlignment, FieldType: String, DefaultValue: Right, List: Left|Right, Description: Alignment of the check icon of an item when it is selected
 #DesignerProperty: Key: RootItemClickBehavior, DisplayName: RootItemClickBehavior, FieldType: String, DefaultValue: CloseSubMenu, List: CloseSubMenu|SelectRootItem|SelectAllSubItems
 #DesignerProperty: Key: CanDeselect, DisplayName: CanDeselect, FieldType: Boolean, DefaultValue: True , Description: If true, then the user can remove the selection by clicking again
 #DesignerProperty: Key: HapticFeedback, DisplayName: HapticFeedback, FieldType: Boolean, DefaultValue: True
@@ -105,6 +113,8 @@ Sub Class_Globals
 	Private m_isInSearchMode As Boolean = False
 	Private m_SearchByText As String = ""
 	Private m_SearchByObject As Object = Null
+	Private m_SelectionIconAlignment As String
+	Private m_TextGap As Float = 5dip
 	
 	'***SubItems***
 	Private xpnl_SubItemBackground As B4XView
@@ -259,6 +269,7 @@ Private Sub IniProps(Props As Map)
 	m_ShowSeperators = Props.GetDefault("ShowSeperators",True)
 	m_HapticFeedback = Props.GetDefault("HapticFeedback",True)
 	m_SeperatorWidth = Props.GetDefault("SeperatorWidth",getSeperatorWidth_BeginWithText)
+	m_SelectionIconAlignment = Props.GetDefault("SelectionIconAlignment",getSelectionIconAlignment_Right).As(String).ToUpperCase
 	
 	g_ItemProperties.Initialize
 	g_ItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
@@ -495,12 +506,26 @@ Public Sub CloseSubMenu
 
 	If xpnl_SubItemListBase.Top > 0 Then
 		SetLayoutAnimated(xclv_Main.AsView,200,0,xclv_Main.AsView.Top,xclv_Main.AsView.Width + 5dip,xclv_Main.AsView.Height)
-		SetLayoutAnimated(xlbl_RootCheckItem,200,xpnl_SubItemListBase.Width - 5dip - xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
+		If m_SelectionIconAlignment = getSelectionIconAlignment_Right Then	SetLayoutAnimated(xlbl_RootCheckItem,200,xpnl_SubItemListBase.Width - m_TextGap*2 - xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
 		SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top + 10dip,xpnl_SubItemListBase.Width - 5dip,g_ItemProperties.Height)
 	Else
 		SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,xpnl_SubItemListBase.Width,g_ItemProperties.Height)
 	End If
 
+	Dim xlbl_ItemText As B4XView
+		
+	For Each v As B4XView In xpnl_RootItemBackground.GetAllViewsRecursive
+		If v.Tag Is String And v.Tag = "xlbl_ItemText" Then
+			xlbl_ItemText = v
+		End If
+	Next
+
+	If m_SelectionIconAlignment = getSelectionIconAlignment_Left Then
+		xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap*2
+	Else
+		xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap*2 - xlbl_RootCheckItem.Width - m_TextGap
+	End If
+	
 	xlbl_RootCollapsButton.SetRotationAnimated(200,0)
 	xpnl_SubItemBackground.SetColorAnimated(200,xpnl_SubItemBackground.Color,xui.Color_Transparent)
 	Sleep(200)
@@ -523,6 +548,24 @@ End Sub
 #End Region
 
 #Region Properties
+
+'Left or Right
+'Default: Right
+Public Sub setSelectionIconAlignment(Alignment As String)
+	m_SelectionIconAlignment = Alignment
+End Sub
+
+Public Sub getSelectionIconAlignment As String
+	Return m_SelectionIconAlignment
+End Sub
+
+Public Sub setShowSeperators(ShowSeperators As Boolean)
+	m_ShowSeperators = ShowSeperators
+End Sub
+
+Public Sub getShowSeperators As Boolean
+	Return m_ShowSeperators
+End Sub
 
 Public Sub setCornerRadius(CornerRadius As Float)
 	m_CornerRadius = CornerRadius
@@ -641,7 +684,7 @@ End Sub
 Private Sub ClearListIntern(xclv As CustomListView,SkipSubMenuItem As Boolean)
 	For i = 0 To xclv.Size -1
 		
-		If SkipSubMenuItem and xpnl_RootClvPanelBackground.IsInitialized And xclv.GetValue(i) = xpnl_RootClvPanelBackground.Tag Then Continue
+		If SkipSubMenuItem And xpnl_RootClvPanelBackground.IsInitialized And xclv.GetValue(i) = xpnl_RootClvPanelBackground.Tag Then Continue
 		
 		xclv.GetPanel(i).RemoveAllViews
 	Next
@@ -701,8 +744,8 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	
 	Dim CurrentIndex As Int = xclv.GetItemFromView(xpnl_Background)
 	Dim SideGap As Float = IIf(xclv = xclv_Main,m_SideGap,0)
-	Dim ItemWidth As Float = IIf(xclv = xclv_Main,mBase.Width - SideGap*2,mBase.Width-m_SideGap*2 + IIf(CurrentIndex > 0,5dip,0))
-	Dim CheckItemWidth As Float = 40dip
+	Dim ItemWidth As Float = IIf(xclv = xclv_Main,mBase.Width - SideGap*2,mBase.Width-m_SideGap*2 + IIf(CurrentIndex > 0,m_TextGap,0))
+	Dim CheckItemWidth As Float = 20dip
 	
 	Dim Text As String
 	Dim Icon As B4XBitmap
@@ -749,10 +792,9 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	xpnl_Background.Color = m_BackgroundColor
 	xpnl_ItemBackground.Color = IIf(isSelected,SelectedBackgroundColor, BackgroundColor)
 	
-	Dim TextGap As Float = 5dip
-	
 
 	Dim xlbl_ItemText As B4XView = CreateLabel("")
+	xlbl_ItemText.Tag = "xlbl_ItemText"
 	xlbl_ItemText.Text = Text
 	xlbl_ItemText.Font = IIf(isSelected,SelectedFont, xFont)
 	xlbl_ItemText.TextColor = IIf(isSelected,SelectedTextColor, TextColor)
@@ -781,14 +823,14 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	xpnl_Seperator.Tag = "xpnl_Seperator"
 	xpnl_Seperator.Color = SeperatorColor
 
-	xpnl_ItemBackground.AddView(xlbl_ItemText,TextGap,0,xpnl_ItemBackground.Width - TextGap - CheckItemWidth,xpnl_Background.Height)
-	xpnl_ItemBackground.AddView(xlbl_CheckItem,xpnl_ItemBackground.Width - CheckItemWidth,0,CheckItemWidth,xpnl_ItemBackground.Height)
+	xpnl_ItemBackground.AddView(xlbl_ItemText,m_TextGap,0,xpnl_ItemBackground.Width - CheckItemWidth - m_TextGap*3,xpnl_Background.Height)
+	xpnl_ItemBackground.AddView(xlbl_CheckItem,xpnl_ItemBackground.Width - CheckItemWidth - m_TextGap,0,CheckItemWidth,xpnl_ItemBackground.Height)
 	
 	Dim xiv_Icon As B4XView = CreateImageView("")
 	If Icon.IsInitialized Then
-		xpnl_ItemBackground.AddView(xiv_Icon,TextGap,(xpnl_Background.Height)/2 - ((xpnl_Background.Height)/2)/2,(xpnl_Background.Height)/2,(xpnl_Background.Height)/2)
-		xlbl_ItemText.Left = xiv_Icon.Left + xiv_Icon.Width '+ 5dip
-		xlbl_ItemText.Width = xlbl_ItemText.Width - xiv_Icon.Width '- 5dip
+		xpnl_ItemBackground.AddView(xiv_Icon,m_TextGap + IIf(m_SelectionIconAlignment = getSelectionIconAlignment_Left,CheckItemWidth + m_TextGap,0),(xpnl_Background.Height)/2 - ((xpnl_Background.Height)/2)/2,(xpnl_Background.Height)/2,(xpnl_Background.Height)/2)
+		xlbl_ItemText.Left = xiv_Icon.Left + xiv_Icon.Width + m_TextGap
+		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xiv_Icon.Left - xiv_Icon.Width - IIf(m_SelectionIconAlignment = getSelectionIconAlignment_Right,xpnl_ItemBackground.Width - xlbl_CheckItem.Left,0) - m_TextGap*2
 		xiv_Icon.SetBitmap(Icon)
 	End If
 	
@@ -803,18 +845,16 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	'RootItem
 	Dim xlbl_CollapsButton As B4XView = CreateLabel("xlbl_CollapsButton")
 	xlbl_CollapsButton.Tag = "xlbl_CollapsButton"
-	xlbl_CollapsButton.Text = Chr(0xE315)
-	xlbl_CollapsButton.Font = xui.CreateMaterialIcons(25)
+	xlbl_CollapsButton.Text = Chr(0xF105)
+	xlbl_CollapsButton.Font = xui.CreateFontAwesome(22)
 	xlbl_CollapsButton.TextColor = IIf(isSelected,SelectedTextColor, TextColor)
 	xlbl_CollapsButton.SetTextAlignment("CENTER","CENTER")
-	xpnl_ItemBackground.AddView(xlbl_CollapsButton,0,0,30dip,xpnl_ItemBackground.Height)
-	'xlbl_CollapsButton.Color = xui.Color_Red
+	xpnl_ItemBackground.AddView(xlbl_CollapsButton,m_TextGap,0dip,CheckItemWidth,xpnl_ItemBackground.Height)
 	
 	If m_SubDataMap.Size > 0 Then
-		xiv_Icon.Left = xiv_Icon.Left + xlbl_CollapsButton.Width - 11dip
-		
-		xlbl_ItemText.Left = xlbl_ItemText.Left + xlbl_CollapsButton.Width - IIf(Icon.IsInitialized,11dip,5dip)
-		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xlbl_ItemText.Left - xlbl_CheckItem.Width
+		xiv_Icon.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap		
+		xlbl_ItemText.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap + IIf(Icon.IsInitialized,xiv_Icon.Width + m_TextGap,0)
+		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xlbl_ItemText.Left - xlbl_CheckItem.Width - m_TextGap*2
 	End If
 		
 	If m_isInSearchMode And Item Is AS_SelectionList_Item Then
@@ -837,21 +877,8 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	If xclv = xclv_SubItems And m_isSubMenuOpen And xpnl_RootClvPanelBackground.Tag = Item Then
 		xlbl_CollapsButton.SetRotationAnimated(0,90)
 	End If
-	
-	'xlbl_CollapsButton.Color = xui.Color_Red
-	'xiv_Icon.Color = xui.Color_Red
-'	xlbl_ItemText.Color = xui.Color_Red
-'	xlbl_CheckItem.Color = xui.Color_Blue
 		
 	'End If
-	
-	If m_SeperatorWidth = getSeperatorWidth_BeginWithText Or (m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Icon.IsInitialized = False) Then
-		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left + xlbl_ItemText.Left,0,xpnl_ItemBackground.Width - xlbl_ItemText.Left,1dip)
-	Else If m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Icon.IsInitialized Then
-		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left + xiv_Icon.Left,0,xpnl_ItemBackground.Width - xiv_Icon.Left,1dip)
-	Else If m_SeperatorWidth = getSeperatorWidth_FullWidth Then
-		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left,0,xpnl_ItemBackground.Width,1dip)
-	End If
 	
 	If Item Is AS_SelectionList_Item And m_SubDataMap.ContainsKey(Item) Then
 		
@@ -866,6 +893,40 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 		Next
 		
 	End If
+	
+	If m_SelectionIconAlignment = getSelectionIconAlignment_Left Then
+		
+		xlbl_CheckItem.Left = m_TextGap
+		If Icon.IsInitialized = False Then
+			xlbl_ItemText.Left = xlbl_CheckItem.Left + xlbl_CheckItem.Width + m_TextGap
+		End If
+		
+		If m_SelectionIconAlignment = getSelectionIconAlignment_Left And xlbl_CollapsButton.Visible Then
+			xlbl_CheckItem.Top = xlbl_CheckItem.Top + IIf(xui.IsB4J,2dip,1dip)
+			
+			xlbl_CollapsButton.Left = xlbl_CheckItem.Left + xlbl_CheckItem.Width + m_TextGap
+			If Icon.IsInitialized Then xiv_Icon.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap
+			xlbl_ItemText.Left = IIf(Icon.IsInitialized,xiv_Icon.Left + xiv_Icon.Width + m_TextGap, xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap)
+		End If
+		
+		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xlbl_ItemText.Left - m_TextGap
+		
+	End If
+	
+	If m_SeperatorWidth = getSeperatorWidth_BeginWithText Or (m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Icon.IsInitialized = False) Then
+		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left + xlbl_ItemText.Left,0,xpnl_ItemBackground.Width - xlbl_ItemText.Left,1dip)
+	Else If m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Icon.IsInitialized Then
+		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left + xiv_Icon.Left,0,xpnl_ItemBackground.Width - xiv_Icon.Left,1dip)
+	Else If m_SeperatorWidth = getSeperatorWidth_FullWidth Then
+		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left,0,xpnl_ItemBackground.Width,1dip)
+	End If
+	
+'	Dim xpnl69 As B4XView = xui.CreatePanel("")
+'	xpnl_ItemBackground.AddView(xpnl69,xiv_Icon.Left,xiv_Icon.Top,xiv_Icon.Width,xiv_Icon.Height)
+'	xpnl69.Color = xui.Color_Red
+'	xlbl_CheckItem.Color = xui.Color_Blue
+'	xlbl_ItemText.Color = xui.Color_Magenta
+'	xlbl_CollapsButton.Color = xui.Color_Red
 	
 End Sub
 
@@ -924,6 +985,7 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		xpnl_RootClvPanelBackground = xclv_Main.GetPanel(Index)
 		xpnl_SubItemBackground.SetLayoutAnimated(0,0,0,mBase.Width,mBase.Height)
 		xpnl_RootClvPanelBackground.Tag = xclv_Main.GetValue(Index)
+		Dim xlbl_ItemText As B4XView
 		
 		For Each v As B4XView In xclv_Main.GetPanel(Index).GetAllViewsRecursive
 			If v.Tag Is String And v.Tag = "xlbl_CollapsButton" Then
@@ -932,6 +994,8 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 				xpnl_RootItemBackground = v
 			Else If v.Tag Is String And v.Tag = "xlbl_CheckItem" Then
 				xlbl_RootCheckItem = v
+			Else If v.Tag Is String And v.Tag = "xlbl_ItemText" Then
+				xlbl_ItemText = v
 			End If
 		Next
 		xlbl_RootCollapsButton.SetRotationAnimated(200,90)
@@ -940,7 +1004,7 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		
 		'Dim MaxVisibleItems As Int = Ceil(g_ItemProperties.Height/lstSubItems.Size)
 		
-		Dim FinalListWidth As Float = mBase.Width-m_SideGap*2 + IIf(Index > 0,5dip,0)
+		Dim FinalListWidth As Float = mBase.Width-m_SideGap*2 + IIf(Index > 0,m_TextGap,0)
 		
 		xpnl_RootItemBackground.RemoveViewFromParent
 		
@@ -992,7 +1056,14 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		Else
 			SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,FinalListWidth,Height)
 		End If
-		SetLayoutAnimated(xlbl_RootCheckItem,200,FinalListWidth - xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
+		
+		If m_SelectionIconAlignment = getSelectionIconAlignment_Right Then
+			SetLayoutAnimated(xlbl_RootCheckItem,200,FinalListWidth - xlbl_RootCheckItem.Width - m_TextGap,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
+			xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap - xlbl_RootCheckItem.Width - m_TextGap
+			Else
+			xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap
+		End If
+		
 		xclv_SubItems.Refresh
 '		Sleep(200)
 '		SetCircleClip(xpnl_SubItemListBase,m_CornerRadius)
@@ -1160,6 +1231,14 @@ Public Sub getRootItemClickBehavior_SelectAllSubItems As String
 	Return "SelectAllSubItems"
 End Sub
 
+
+Public Sub getSelectionIconAlignment_Left As String
+	Return "LEFT"
+End Sub
+
+Public Sub getSelectionIconAlignment_Right As String
+	Return "RIGHT"
+End Sub
 
 #End Region
 
