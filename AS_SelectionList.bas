@@ -55,6 +55,10 @@ V2.02
 	-New Designer Property SelectionIconAlignment
 		-Default: Right
 	-New get and set ShowSeperators
+V2.03 (nicht veröffentlicht)
+	-New RefreshList - Removes the layout of the items and rebuilds the layout
+	-Update Base_Resize - if the width changes, the items are recreated
+	
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -89,6 +93,7 @@ Sub Class_Globals
 	Public Tag As Object
 	Private m_DataMap As B4XOrderedMap
 	Private m_SubDataMap As B4XOrderedMap
+	Private m_OldWidth As Double
 	
 	Private g_ItemProperties As AS_SelectionList_ItemProperties
 	Private g_SubItemProperties As AS_SelectionList_SubItemProperties
@@ -125,6 +130,8 @@ Sub Class_Globals
 	Private xpnl_RootItemBackground As B4XView
 	Private xlbl_RootCheckItem As B4XView
 	'***
+	
+	Private m_TextEngine As BCTextEngine
 	
 	Private xiv_RefreshImage As B4XView
 	
@@ -225,11 +232,13 @@ End Sub
 'Base type must be Object
 Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	mBase = Base
+	m_OldWidth = mBase.Width
     Tag = mBase.Tag
 	mBase.Tag = Me
 
 	IniProps(Props)
 
+	m_TextEngine.Initialize(mBase)
 	mBase.Color = m_BackgroundColor
 
 	Dim xpnl_ListBackground As B4XView = xui.CreatePanel("")
@@ -300,9 +309,14 @@ End Sub
 Public Sub Base_Resize (Width As Double, Height As Double)
 	mBase.SetLayoutAnimated(0,mBase.Left,mBase.Top,Width,Height)
 	xpnl_SubItemBackground.SetLayoutAnimated(0,0,0,Width,Height)
-	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
 	xclv_Main.AsView.SetLayoutAnimated(0,0,0,Width,Height)
 	xclv_Main.Base_Resize(Width,Height)
+	
+	If m_OldWidth <> Width Then
+		RefreshList
+	End If
+	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
+	m_OldWidth = mBase.Width
 End Sub
 
 #Region Methods
@@ -358,6 +372,23 @@ Public Sub Clear
 	m_DataMap.Clear
 End Sub
 
+'Removes the layout of the items and rebuilds the layout
+Public Sub RefreshList
+	For i = 0 To xclv_Main.Size -1
+		If xclv_Main.GetPanel(i).NumberOfViews > 0 Then
+			xclv_Main.GetPanel(i).RemoveAllViews
+			BuildItem(xclv_Main.GetPanel(i),xclv_Main.GetValue(i),xclv_Main)
+		End If
+	Next
+	For i = 0 To xclv_SubItems.Size -1
+		If xclv_SubItems.GetPanel(i).NumberOfViews > 0 Then
+			xclv_SubItems.GetPanel(i).RemoveAllViews
+			BuildItem(xclv_SubItems.GetPanel(i),xclv_SubItems.GetValue(i),xclv_SubItems)
+		End If
+	Next
+End Sub
+
+'Clears the list and adds the items again
 Public Sub RebuildList
 	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
 	xiv_RefreshImage.SetVisibleAnimated(0,True)
