@@ -57,8 +57,14 @@ V2.02
 	-New get and set ShowSeperators
 V2.03 (nicht veröffentlicht)
 	-New RefreshList - Removes the layout of the items and rebuilds the layout
+	-New Designer Property SearchTextHighlightedColor - The text color of the searched text when searching for something via SearchByText
+		-Default: Red
+	-New EmptyListTextLabel - Text that is displayed in the middle of the view if the list is empty, e.g. in a search if no items match the search
+	-New get EmptyListTextLabel
+	-New get and set EmptyListText
+	-New get and set EmptySearchListText
 	-Update Base_Resize - if the width changes, the items are recreated
-	
+	-Change The ItemText is now based on BBLabel
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -73,6 +79,7 @@ V2.03 (nicht veröffentlicht)
 #DesignerProperty: Key: ShowSeperators, DisplayName: ShowSeperators, FieldType: Boolean, DefaultValue: True , Description: Show seperators between items
 #DesignerProperty: Key: SeperatorWidth, DisplayName: SeperatorWidth, FieldType: String, DefaultValue: BeginWithText, List: BeginWithText|FullWidth|BeginWithIcon
 #DesignerProperty: Key: SeperatorColor, DisplayName: SeperatorColor, FieldType: Color, DefaultValue: 0x28000000
+#DesignerProperty: Key: SearchTextHighlightedColor, DisplayName: SearchTextHighlightedColor, FieldType: Color, DefaultValue: 0xFFDD5F60, Description: The text color of the searched text when searching for something via SearchByText
 
 #Event: SelectionChanged
 
@@ -120,6 +127,7 @@ Sub Class_Globals
 	Private m_SearchByObject As Object = Null
 	Private m_SelectionIconAlignment As String
 	Private m_TextGap As Float = 5dip
+	Private m_SearchTextHighlightedColor As Int
 	
 	'***SubItems***
 	Private xpnl_SubItemBackground As B4XView
@@ -131,11 +139,17 @@ Sub Class_Globals
 	Private xlbl_RootCheckItem As B4XView
 	'***
 	
+	'***EmptyList***
+	Private xlbl_EmptyListText As B4XView
+	Private m_EmptyListText As String = "Nothing here yet"
+	Private m_EmptySearchListText As String = "No items found"
+	'***
+	
 	Private m_TextEngine As BCTextEngine
 	
 	Private xiv_RefreshImage As B4XView
 	
-	Type AS_SelectionList_Theme(BackgroundColor As Int,Item_BackgroundColor As Int,Item_TextColor As Int,Item_SeperatorColor As Int,SubItem_BackgroundColor As Int,SubItem_TextColor As Int,SubItem_SeperatorColor As Int)
+	Type AS_SelectionList_Theme(BackgroundColor As Int,Item_BackgroundColor As Int,Item_TextColor As Int,Item_SeperatorColor As Int,SubItem_BackgroundColor As Int,SubItem_TextColor As Int,SubItem_SeperatorColor As Int,SearchTextHighlightedColor As Int,EmptyListTextColor As Int)
 	
 End Sub
 
@@ -157,6 +171,9 @@ Public Sub setTheme(Theme As AS_SelectionList_Theme)
 	
 	g_SelectedSubItemPropertiess.BackgroundColor = Theme.SubItem_BackgroundColor
 	g_SelectedSubItemPropertiess.TextColor = Theme.SubItem_TextColor
+	
+	m_SearchTextHighlightedColor = Theme.SearchTextHighlightedColor
+	xlbl_EmptyListText.TextColor = Theme.EmptyListTextColor
 	
 	setBackgroundColor(Theme.BackgroundColor)
 	
@@ -185,6 +202,8 @@ Public Sub getTheme_Dark As AS_SelectionList_Theme
 	Theme.Item_BackgroundColor = xui.Color_ARGB(255,32, 33, 37)
 	Theme.Item_TextColor = xui.Color_White
 	Theme.Item_SeperatorColor = xui.Color_ARGB(40,255,255,255)
+	Theme.SearchTextHighlightedColor = xui.Color_ARGB(255,221, 95, 96)
+	Theme.EmptyListTextColor = xui.Color_White
 	
 	Theme.SubItem_BackgroundColor = xui.Color_ARGB(255,32, 33, 37)
 	Theme.SubItem_TextColor = xui.Color_White
@@ -202,6 +221,8 @@ Public Sub getTheme_Light As AS_SelectionList_Theme
 	Theme.Item_BackgroundColor = xui.Color_ARGB(255,227, 226, 232)
 	Theme.Item_TextColor = xui.Color_Black
 	Theme.Item_SeperatorColor = xui.Color_ARGB(40,0,0,0)
+	Theme.SearchTextHighlightedColor = xui.Color_ARGB(255,221, 95, 96)
+	Theme.EmptyListTextColor = xui.Color_Black
 	
 	
 	Theme.SubItem_BackgroundColor = xui.Color_ARGB(255,227, 226, 232)
@@ -251,6 +272,21 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	xiv_RefreshImage.Visible = False
 	mBase.AddView(xiv_RefreshImage,0,0,mBase.Width,mBase.Height)
 
+	xlbl_EmptyListText = CreateLabel("")
+	xlbl_EmptyListText.TextColor = xui.Color_Black
+	xlbl_EmptyListText.Font = xui.CreateDefaultBoldFont(18)
+	xlbl_EmptyListText.SetTextAlignment("CENTER","CENTER")
+	xlbl_EmptyListText.Text = m_EmptyListText
+	'xlbl_EmptyListText.Color = xui.Color_Red
+	#If B4I
+	xlbl_EmptyListText.As(Label).Multiline = True
+	#Else If B4J
+	xlbl_EmptyListText.As(Label).WrapText = True
+	#Else B4A
+	xlbl_EmptyListText.As(Label).SingleLine = False
+	#End If
+	mBase.AddView(xlbl_EmptyListText,mBase.Width/2 - 200dip/2,mBase.Height/2 - 100dip/2,200dip,100dip)
+
 	#If B4A
 	Base_Resize(mBase.Width,mBase.Height)
 	#End If
@@ -279,6 +315,7 @@ Private Sub IniProps(Props As Map)
 	m_HapticFeedback = Props.GetDefault("HapticFeedback",True)
 	m_SeperatorWidth = Props.GetDefault("SeperatorWidth",getSeperatorWidth_BeginWithText)
 	m_SelectionIconAlignment = Props.GetDefault("SelectionIconAlignment",getSelectionIconAlignment_Right).As(String).ToUpperCase
+	m_SearchTextHighlightedColor = xui.PaintOrColorToColor(Props.GetDefault("SearchTextHighlightedColor",xui.Color_ARGB(255,221, 95, 96)))
 	
 	g_ItemProperties.Initialize
 	g_ItemProperties.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
@@ -311,11 +348,13 @@ Public Sub Base_Resize (Width As Double, Height As Double)
 	xpnl_SubItemBackground.SetLayoutAnimated(0,0,0,Width,Height)
 	xclv_Main.AsView.SetLayoutAnimated(0,0,0,Width,Height)
 	xclv_Main.Base_Resize(Width,Height)
+	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
+	xlbl_EmptyListText.SetLayoutAnimated(0,mBase.Width/2 - IIf(Width<200dip,Width,200dip)/2,mBase.Height/2 - 100dip/2,IIf(Width<200dip,Width,200dip), 100dip)
 	
 	If m_OldWidth <> Width Then
+		Sleep(0)
 		RefreshList
 	End If
-	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
 	m_OldWidth = mBase.Width
 End Sub
 
@@ -370,6 +409,9 @@ Public Sub Clear
 	xclv_Main.Clear
 	xclv_SubItems.Clear
 	m_DataMap.Clear
+	
+	xlbl_EmptyListText.Text = m_EmptyListText
+	xlbl_EmptyListText.Visible = True
 End Sub
 
 'Removes the layout of the items and rebuilds the layout
@@ -400,6 +442,9 @@ Public Sub RebuildList
 	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
 		AddItemIntern(Item,False)
 	Next
+	
+	xlbl_EmptyListText.Text = m_EmptyListText
+	xlbl_EmptyListText.Visible = xclv_Main.Size = 0
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
@@ -436,6 +481,9 @@ Public Sub SearchByText(Text As String)
 		If Item.Text.ToLowerCase.Contains(Text.ToLowerCase) Or SearchValueFound Then AddItemIntern(Item,False)
 	Next
 	
+	xlbl_EmptyListText.Text = m_EmptySearchListText
+	xlbl_EmptyListText.Visible = xclv_Main.Size = 0
+	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
 End Sub
@@ -465,6 +513,9 @@ Public Sub SearchByValue(Value As Object)
 		
 		If Item.Value = Value Or SearchValueFound Then AddItemIntern(Item,False)
 	Next
+	
+	xlbl_EmptyListText.Text = m_EmptySearchListText
+	xlbl_EmptyListText.Visible = xclv_Main.Size = 0
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
@@ -543,18 +594,18 @@ Public Sub CloseSubMenu
 		SetLayoutAnimated(xpnl_SubItemListBase,200,xpnl_SubItemListBase.Left,xpnl_SubItemListBase.Top,xpnl_SubItemListBase.Width,g_ItemProperties.Height)
 	End If
 
-	Dim xlbl_ItemText As B4XView
+	Dim xbblbl_ItemText As BBLabel
 		
 	For Each v As B4XView In xpnl_RootItemBackground.GetAllViewsRecursive
-		If v.Tag Is String And v.Tag = "xlbl_ItemText" Then
-			xlbl_ItemText = v
+		If v.Tag Is BBLabel And v.Tag.As(BBLabel).Tag = "xbblbl_ItemText" Then
+			xbblbl_ItemText = v.Tag
 		End If
 	Next
 
 	If m_SelectionIconAlignment = getSelectionIconAlignment_Left Then
-		xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap*2
+		xbblbl_ItemText.mBase.Width = xpnl_RootItemBackground.Width - xbblbl_ItemText.mBase.Left - m_TextGap*2
 	Else
-		xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap*2 - xlbl_RootCheckItem.Width - m_TextGap
+		xbblbl_ItemText.mBase.Width = xpnl_RootItemBackground.Width - xbblbl_ItemText.mBase.Left - m_TextGap*2 - xlbl_RootCheckItem.Width - m_TextGap
 	End If
 	
 	xlbl_RootCollapsButton.SetRotationAnimated(200,0)
@@ -579,6 +630,38 @@ End Sub
 #End Region
 
 #Region Properties
+
+'<code>AS_SelectionList1.EmptyListTextLabel.Font = xui.CreateDefaultBoldFont(20)</code>
+Public Sub getEmptyListTextLabel As B4XView
+	Return xlbl_EmptyListText
+End Sub
+
+'<code>AS_SelectionList1.EmptySearchListText = "No items found"</code>
+Public Sub setEmptySearchListText(Text As String)
+	m_EmptySearchListText = Text
+End Sub
+
+Public Sub getEmptySearchListText As String
+	Return m_EmptySearchListText
+End Sub
+
+'<code>AS_SelectionList1.EmptyListText = "Nothing here yet"</code>
+Public Sub setEmptyListText(Text As String)
+	m_EmptyListText = Text
+End Sub
+
+Public Sub getEmptyListText As String
+	Return m_EmptyListText
+End Sub
+
+'The text color of the searched text when searching for something via SearchByText
+Public Sub setSearchTextHighlightedColor(Color As Int)
+	m_SearchTextHighlightedColor = Color
+End Sub
+
+Public Sub getSearchTextHighlightedColor As Int
+	Return m_SearchTextHighlightedColor
+End Sub
 
 'Left or Right
 'Default: Right
@@ -709,7 +792,7 @@ Private Sub AddItemIntern(Item As AS_SelectionList_Item,Add2DataMap As Boolean)
 	
 	If Add2DataMap Then m_DataMap.Put(Item,xclv_Main.Size)
 	xclv_Main.Add(xpnl_Background,Item)
-	
+	xlbl_EmptyListText.Visible = False
 End Sub
 
 Private Sub ClearListIntern(xclv As CustomListView,SkipSubMenuItem As Boolean)
@@ -824,19 +907,33 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	xpnl_ItemBackground.Color = IIf(isSelected,SelectedBackgroundColor, BackgroundColor)
 	
 
+'	Dim xlbl_ItemText As B4XView = CreateLabel("")
+'	xlbl_ItemText.Tag = "xlbl_ItemText"
+'	xlbl_ItemText.Text = Text
+'	xlbl_ItemText.Font = IIf(isSelected,SelectedFont, xFont)
+'	xlbl_ItemText.TextColor = IIf(isSelected,SelectedTextColor, TextColor)
+'	xlbl_ItemText.SetTextAlignment("CENTER","LEFT")
+'	#If B4I
+'	xlbl_ItemText.As(Label).Multiline = True
+'	#Else If B4J
+'	xlbl_ItemText.As(Label).WrapText = True
+'	#Else B4A
+'	xlbl_ItemText.As(Label).SingleLine = False
+'	#End If
+	
+	Dim xpnl_ItemText As B4XView = xui.CreatePanel("")
+	
 	Dim xlbl_ItemText As B4XView = CreateLabel("")
-	xlbl_ItemText.Tag = "xlbl_ItemText"
-	xlbl_ItemText.Text = Text
 	xlbl_ItemText.Font = IIf(isSelected,SelectedFont, xFont)
 	xlbl_ItemText.TextColor = IIf(isSelected,SelectedTextColor, TextColor)
 	xlbl_ItemText.SetTextAlignment("CENTER","LEFT")
-	#If B4I
-	xlbl_ItemText.As(Label).Multiline = True
-	#Else If B4J
-	xlbl_ItemText.As(Label).WrapText = True
-	#Else B4A
-	xlbl_ItemText.As(Label).SingleLine = False
-	#End If
+	
+	Dim xbblbl_ItemText As BBLabel
+	xbblbl_ItemText.Initialize(Me,"xbblbl_ItemText")
+	xbblbl_ItemText.DesignerCreateView(xpnl_ItemText,xlbl_ItemText,CreateMap())
+	xbblbl_ItemText.TextEngine = m_TextEngine
+	xbblbl_ItemText.Tag = "xbblbl_ItemText"
+	
 	
 	Dim xlbl_CheckItem As B4XView = CreateLabel("")
 	xlbl_CheckItem.Tag = "xlbl_CheckItem"
@@ -854,14 +951,14 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	xpnl_Seperator.Tag = "xpnl_Seperator"
 	xpnl_Seperator.Color = SeperatorColor
 
-	xpnl_ItemBackground.AddView(xlbl_ItemText,m_TextGap,0,xpnl_ItemBackground.Width - CheckItemWidth - m_TextGap*3,xpnl_Background.Height)
+	xpnl_ItemBackground.AddView(xpnl_ItemText,m_TextGap,0,xpnl_ItemBackground.Width - CheckItemWidth - m_TextGap*3,xpnl_ItemBackground.Height)
 	xpnl_ItemBackground.AddView(xlbl_CheckItem,xpnl_ItemBackground.Width - CheckItemWidth - m_TextGap,0,CheckItemWidth,xpnl_ItemBackground.Height)
 	
 	Dim xiv_Icon As B4XView = CreateImageView("")
 	If Icon.IsInitialized Then
 		xpnl_ItemBackground.AddView(xiv_Icon,m_TextGap + IIf(m_SelectionIconAlignment = getSelectionIconAlignment_Left,CheckItemWidth + m_TextGap,0),(xpnl_Background.Height)/2 - ((xpnl_Background.Height)/2)/2,(xpnl_Background.Height)/2,(xpnl_Background.Height)/2)
-		xlbl_ItemText.Left = xiv_Icon.Left + xiv_Icon.Width + m_TextGap
-		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xiv_Icon.Left - xiv_Icon.Width - IIf(m_SelectionIconAlignment = getSelectionIconAlignment_Right,xpnl_ItemBackground.Width - xlbl_CheckItem.Left,0) - m_TextGap*2
+		xpnl_ItemText.Left = xiv_Icon.Left + xiv_Icon.Width + m_TextGap
+		xpnl_ItemText.Width = xpnl_ItemBackground.Width - xiv_Icon.Left - xiv_Icon.Width - IIf(m_SelectionIconAlignment = getSelectionIconAlignment_Right,xpnl_ItemBackground.Width - xlbl_CheckItem.Left,0) - m_TextGap*2
 		xiv_Icon.SetBitmap(Icon)
 	End If
 	
@@ -883,9 +980,9 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	xpnl_ItemBackground.AddView(xlbl_CollapsButton,m_TextGap,0dip,CheckItemWidth,xpnl_ItemBackground.Height)
 	
 	If m_SubDataMap.Size > 0 Then
-		xiv_Icon.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap		
-		xlbl_ItemText.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap + IIf(Icon.IsInitialized,xiv_Icon.Width + m_TextGap,0)
-		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xlbl_ItemText.Left - xlbl_CheckItem.Width - m_TextGap*2
+		xiv_Icon.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap
+		xpnl_ItemText.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap + IIf(Icon.IsInitialized,xiv_Icon.Width + m_TextGap,0)
+		xpnl_ItemText.Width = xpnl_ItemBackground.Width - xpnl_ItemText.Left - xlbl_CheckItem.Width - m_TextGap*2
 	End If
 		
 	If m_isInSearchMode And Item Is AS_SelectionList_Item Then
@@ -893,12 +990,14 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 		Dim SearchValueFound As Boolean = False
 		
 		Dim lstSubItems As List = m_SubDataMap.Get(Item)
-		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
-			If (m_SearchByText <> "" And SubItem.Text.ToLowerCase.Contains(m_SearchByText.ToLowerCase)) Or (m_SearchByObject <> Null And m_SearchByObject = SubItem.Value) Then
-				SearchValueFound = True
-				Exit
-			End If
-		Next
+		If lstSubItems.IsInitialized Then
+			For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+				If (m_SearchByText <> "" And SubItem.Text.ToLowerCase.Contains(m_SearchByText.ToLowerCase)) Or (m_SearchByObject <> Null And m_SearchByObject = SubItem.Value) Then
+					SearchValueFound = True
+					Exit
+				End If
+			Next
+		End If
 		
 		xlbl_CollapsButton.Visible = SearchValueFound
 	Else
@@ -929,7 +1028,7 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 		
 		xlbl_CheckItem.Left = m_TextGap
 		If Icon.IsInitialized = False Then
-			xlbl_ItemText.Left = xlbl_CheckItem.Left + xlbl_CheckItem.Width + m_TextGap
+			xpnl_ItemText.Left = xlbl_CheckItem.Left + xlbl_CheckItem.Width + m_TextGap
 		End If
 		
 		If m_SelectionIconAlignment = getSelectionIconAlignment_Left And xlbl_CollapsButton.Visible Then
@@ -937,28 +1036,61 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 			
 			xlbl_CollapsButton.Left = xlbl_CheckItem.Left + xlbl_CheckItem.Width + m_TextGap
 			If Icon.IsInitialized Then xiv_Icon.Left = xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap
-			xlbl_ItemText.Left = IIf(Icon.IsInitialized,xiv_Icon.Left + xiv_Icon.Width + m_TextGap, xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap)
+			xpnl_ItemText.Left = IIf(Icon.IsInitialized,xiv_Icon.Left + xiv_Icon.Width + m_TextGap, xlbl_CollapsButton.Left + xlbl_CollapsButton.Width + m_TextGap)
 		End If
 		
-		xlbl_ItemText.Width = xpnl_ItemBackground.Width - xlbl_ItemText.Left - m_TextGap
+		xpnl_ItemText.Width = xpnl_ItemBackground.Width - xpnl_ItemText.Left - m_TextGap
 		
 	End If
 	
 	If m_SeperatorWidth = getSeperatorWidth_BeginWithText Or (m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Icon.IsInitialized = False) Then
-		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left + xlbl_ItemText.Left,0,xpnl_ItemBackground.Width - xlbl_ItemText.Left,1dip)
+		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left + xpnl_ItemText.Left,0,xpnl_ItemBackground.Width - xpnl_ItemText.Left,1dip)
 	Else If m_SeperatorWidth = getSeperatorWidth_BeginWithIcon And Icon.IsInitialized Then
 		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left + xiv_Icon.Left,0,xpnl_ItemBackground.Width - xiv_Icon.Left,1dip)
 	Else If m_SeperatorWidth = getSeperatorWidth_FullWidth Then
 		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left,0,xpnl_ItemBackground.Width,1dip)
 	End If
 	
+	xbblbl_ItemText.WordWrap = True
+	xbblbl_ItemText.Text = GenerateText(Text,IIf(isSelected,SelectedTextColor, TextColor))
+	xbblbl_ItemText.DisableResizeEvent = True
+	xbblbl_ItemText.ForegroundImageView.Left = 0dip 'set this after you set the text.
+	
+	'm_SearchByText
+	
 '	Dim xpnl69 As B4XView = xui.CreatePanel("")
 '	xpnl_ItemBackground.AddView(xpnl69,xiv_Icon.Left,xiv_Icon.Top,xiv_Icon.Width,xiv_Icon.Height)
 '	xpnl69.Color = xui.Color_Red
 '	xlbl_CheckItem.Color = xui.Color_Blue
-'	xlbl_ItemText.Color = xui.Color_Magenta
+'	xpnl_ItemText.Color = xui.Color_Magenta
 '	xlbl_CollapsButton.Color = xui.Color_Red
 	
+End Sub
+
+Private Sub GenerateText(MainText As String,TextColor As Int) As String
+	If m_SearchByText = "" Then Return MainText
+	Dim MainTextLower As String = MainText.ToLowerCase
+	Dim SearchTextLower As String = m_SearchByText.ToLowerCase
+	
+	' Check if the SearchTextLower exists in MainText
+	If SearchTextLower = "" Or Not(MainTextLower.Contains(SearchTextLower)) Then
+		Return MainText ' No highlighting if SearchTextLower is empty or not found
+	End If
+    
+	' Initialize variables
+	Dim StartIndex As Int = MainTextLower.IndexOf(SearchTextLower)
+	Dim EndIndex As Int = StartIndex + SearchTextLower.Length
+
+	' Split MainText into parts
+	Dim BeforeText As String = MainText.SubString2(0, StartIndex)
+	Dim HighlightText As String = MainText.SubString2(StartIndex, EndIndex)
+	Dim AfterText As String = MainText.SubString(EndIndex)
+
+	' Create BBCode
+	Dim Result As String
+	Result = $"[color=#${ColorToHex(TextColor)}]${BeforeText}[/color][color=#${ColorToHex(m_SearchTextHighlightedColor)}]${HighlightText}[/color][color=#${ColorToHex(TextColor)}]${AfterText}[/color]"$
+
+	Return Result
 End Sub
 
 #End Region
@@ -1016,7 +1148,7 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		xpnl_RootClvPanelBackground = xclv_Main.GetPanel(Index)
 		xpnl_SubItemBackground.SetLayoutAnimated(0,0,0,mBase.Width,mBase.Height)
 		xpnl_RootClvPanelBackground.Tag = xclv_Main.GetValue(Index)
-		Dim xlbl_ItemText As B4XView
+		Dim xbblbl_ItemText As BBLabel
 		
 		For Each v As B4XView In xclv_Main.GetPanel(Index).GetAllViewsRecursive
 			If v.Tag Is String And v.Tag = "xlbl_CollapsButton" Then
@@ -1025,8 +1157,8 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 				xpnl_RootItemBackground = v
 			Else If v.Tag Is String And v.Tag = "xlbl_CheckItem" Then
 				xlbl_RootCheckItem = v
-			Else If v.Tag Is String And v.Tag = "xlbl_ItemText" Then
-				xlbl_ItemText = v
+			Else If v.Tag Is BBLabel And v.Tag.As(BBLabel).Tag = "xbblbl_ItemText" Then
+				xbblbl_ItemText = v.Tag
 			End If
 		Next
 		xlbl_RootCollapsButton.SetRotationAnimated(200,90)
@@ -1090,9 +1222,9 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 		
 		If m_SelectionIconAlignment = getSelectionIconAlignment_Right Then
 			SetLayoutAnimated(xlbl_RootCheckItem,200,FinalListWidth - xlbl_RootCheckItem.Width - m_TextGap,xlbl_RootCheckItem.Top,xlbl_RootCheckItem.Width,xlbl_RootCheckItem.Height)
-			xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap - xlbl_RootCheckItem.Width - m_TextGap
+			xbblbl_ItemText.mBase.Width = xpnl_RootItemBackground.Width - xbblbl_ItemText.mBase.Left - m_TextGap - xlbl_RootCheckItem.Width - m_TextGap
 			Else
-			xlbl_ItemText.Width = xpnl_RootItemBackground.Width - xlbl_ItemText.Left - m_TextGap
+			xbblbl_ItemText.mBase.Width = xpnl_RootItemBackground.Width - xbblbl_ItemText.mBase.Left - m_TextGap
 		End If
 		
 		xclv_SubItems.Refresh
@@ -1274,6 +1406,13 @@ End Sub
 #End Region
 
 #Region Functions
+
+Private Sub ColorToHex(clr As Int) As String
+	Dim bc As ByteConverter
+	Dim Hex As String = bc.HexFromBytes(bc.IntsToBytes(Array As Int(clr)))
+	If Hex.Length > 6 Then Hex = Hex.SubString(Hex.Length - 6)
+	Return Hex
+End Sub
 
 Private Sub ini_xclv(EventName As String,Parent As B4XView,ShowScrollBar As Boolean) As CustomListView
 	Dim tmplbl As Label
