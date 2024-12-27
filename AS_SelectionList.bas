@@ -258,7 +258,6 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	mBase.Tag = Me
 
 	IniProps(Props)
-
 	m_TextEngine.Initialize(mBase)
 	mBase.Color = m_BackgroundColor
 
@@ -346,10 +345,15 @@ End Sub
 Public Sub Base_Resize (Width As Double, Height As Double)
 	mBase.SetLayoutAnimated(0,mBase.Left,mBase.Top,Width,Height)
 	xpnl_SubItemBackground.SetLayoutAnimated(0,0,0,Width,Height)
+	
+	Dim OldOffsetY As Int = xclv_Main.sv.ScrollViewOffsetY
+	
 	xclv_Main.AsView.SetLayoutAnimated(0,0,0,Width,Height)
 	xclv_Main.Base_Resize(Width,Height)
 	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
 	xlbl_EmptyListText.SetLayoutAnimated(0,mBase.Width/2 - IIf(Width<200dip,Width,200dip)/2,mBase.Height/2 - 100dip/2,IIf(Width<200dip,Width,200dip), 100dip)
+	
+	xclv_Main.sv.ScrollViewOffsetY = OldOffsetY
 	
 	If m_OldWidth <> Width Then
 		Sleep(0)
@@ -412,6 +416,19 @@ Public Sub Clear
 	
 	xlbl_EmptyListText.Text = m_EmptyListText
 	xlbl_EmptyListText.Visible = True
+End Sub
+
+'Takes a snapshot of the layout and displays it in an ImageView
+'The list can be cleared and rebuilt without the user seeing any flickering
+Public Sub StartRefresh
+	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
+	xiv_RefreshImage.SetVisibleAnimated(0,True)
+End Sub
+
+'Hides the ImageView with the layout snapshot
+Public Sub StopRefresh
+	Sleep(0)
+	xiv_RefreshImage.SetVisibleAnimated(0,False)
 End Sub
 
 'Removes the layout of the items and rebuilds the layout
@@ -780,6 +797,14 @@ Public Sub getSelectedSubItemPropertiess As AS_SelectionList_SelectedSubItemProp
 	Return g_SelectedSubItemPropertiess
 End Sub
 
+Public Sub getSearchText As String
+	Return m_SearchByText
+End Sub
+
+Public Sub setSearchText(SearchText As String)
+	m_SearchByText = SearchText
+End Sub
+
 #End Region
 
 #Region InternFunctions
@@ -922,8 +947,10 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 '	#End If
 	
 	Dim xpnl_ItemText As B4XView = xui.CreatePanel("")
+	xpnl_ItemText.SetLayoutAnimated(0,0,0,1dip,1dip)
 	
 	Dim xlbl_ItemText As B4XView = CreateLabel("")
+	xlbl_ItemText.Text = ""
 	xlbl_ItemText.Font = IIf(isSelected,SelectedFont, xFont)
 	xlbl_ItemText.TextColor = IIf(isSelected,SelectedTextColor, TextColor)
 	xlbl_ItemText.SetTextAlignment("CENTER","LEFT")
@@ -931,6 +958,7 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	Dim xbblbl_ItemText As BBLabel
 	xbblbl_ItemText.Initialize(Me,"xbblbl_ItemText")
 	xbblbl_ItemText.DesignerCreateView(xpnl_ItemText,xlbl_ItemText,CreateMap())
+	xbblbl_ItemText.Paragraph.Initialize
 	xbblbl_ItemText.TextEngine = m_TextEngine
 	xbblbl_ItemText.Tag = "xbblbl_ItemText"
 	
@@ -1052,10 +1080,12 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	End If
 	
 	xbblbl_ItemText.WordWrap = True
+	'xbblbl_ItemText.Text = GenerateText(Text,IIf(isSelected,SelectedTextColor, TextColor))
 	xbblbl_ItemText.Text = GenerateText(Text,IIf(isSelected,SelectedTextColor, TextColor))
+	UpdateBBLabelHeight(xbblbl_ItemText)
+	'xbblbl_ItemText.ParseAndDraw
 	xbblbl_ItemText.DisableResizeEvent = True
 	xbblbl_ItemText.ForegroundImageView.Left = 0dip 'set this after you set the text.
-	
 	'm_SearchByText
 	
 '	Dim xpnl69 As B4XView = xui.CreatePanel("")
@@ -1066,6 +1096,26 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 '	xlbl_CollapsButton.Color = xui.Color_Red
 	
 End Sub
+
+Private Sub UpdateBBLabelHeight(lbl As BBLabel)
+	Dim par As BCParagraph = lbl.Paragraph
+	If par.IsInitialized = False Then Return
+	Dim MaxHeight As Int = lbl.mBase.Height
+	For Each line As BCTextLine In par.TextLines
+		If lbl.Padding.Top + (line.BaselineY + line.MaxHeightBelowBaseLine) / m_TextEngine.mScale > MaxHeight Then
+			Dim Height As Double = lbl.Padding.Top + (line.BaselineY - line.MaxHeightAboveBaseLine) / m_TextEngine.mScale - 1dip
+			
+			Dim ClipPanel As B4XView = xui.CreatePanel("")
+			ClipPanel.Color = xui.Color_Transparent
+			lbl.mBase.AddView(ClipPanel,0,Height,lbl.mBase.Width,Height)
+			lbl.mBase.Top = lbl.mBase.Top + (lbl.mBase.Height - Height)
+			'lbl.Text = lbl.Text & "..."
+
+			Exit
+		End If
+	Next
+End Sub
+
 
 Private Sub GenerateText(MainText As String,TextColor As Int) As String
 	If m_SearchByText = "" Then Return MainText
