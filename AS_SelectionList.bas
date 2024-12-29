@@ -67,6 +67,7 @@ V2.03 (nicht veröffentlicht)
 		Default: True
 	-New CustomDrawItem Event
 	-New AS_SelectionList_CustomDrawItemViews Type
+	-New AddItem2 - Adding an item with AS_SelectionList_Item parameter
 	-Update Base_Resize - if the width changes, the items are recreated
 	-Change The ItemText is now based on BBLabel
 #End If
@@ -199,7 +200,7 @@ Public Sub setTheme(Theme As AS_SelectionList_Theme)
 			Sleep(250)
 			xiv_RefreshImage.SetVisibleAnimated(250,False)
 	End Select
-	
+
 End Sub
 
 Public Sub getTheme_Dark As AS_SelectionList_Theme
@@ -266,7 +267,6 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	mBase.Tag = Me
 
 	IniProps(Props)
-	m_TextEngine.Initialize(mBase)
 	mBase.Color = m_BackgroundColor
 
 	Dim xpnl_ListBackground As B4XView = xui.CreatePanel("")
@@ -293,6 +293,11 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	xlbl_EmptyListText.As(Label).SingleLine = False
 	#End If
 	mBase.AddView(xlbl_EmptyListText,mBase.Width/2 - 200dip/2,mBase.Height/2 - 100dip/2,200dip,100dip)
+
+	m_TextEngine.Initialize(mBase)
+	#If B4I
+	m_TextEngine.mScale = GetDeviceLayoutValues.NonnormalizedScale + 0.2
+	#End If
 
 	#If B4A
 	Base_Resize(mBase.Width,mBase.Height)
@@ -390,6 +395,11 @@ Public Sub AddItem(Text As String,Icon As B4XBitmap,Value As Object) As AS_Selec
 	Item.Icon = Icon
 	Item.Value = Value
 	
+	AddItemIntern(Item,True)
+	Return Item
+End Sub
+
+Public Sub AddItem2(Item As AS_SelectionList_Item) As AS_SelectionList_Item
 	AddItemIntern(Item,True)
 	Return Item
 End Sub
@@ -975,7 +985,6 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	Dim xbblbl_ItemText As BBLabel
 	xbblbl_ItemText.Initialize(Me,"xbblbl_ItemText")
 	xbblbl_ItemText.DesignerCreateView(xpnl_ItemText,xlbl_ItemText,CreateMap())
-	xbblbl_ItemText.Paragraph.Initialize
 	xbblbl_ItemText.TextEngine = m_TextEngine
 	xbblbl_ItemText.Tag = "xbblbl_ItemText"
 	
@@ -1096,14 +1105,10 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 		xpnl_Background.AddView(xpnl_Seperator,xpnl_ItemBackground.Left,0,xpnl_ItemBackground.Width,1dip)
 	End If
 	
-	xbblbl_ItemText.WordWrap = True
-	'xbblbl_ItemText.Text = GenerateText(Text,IIf(isSelected,SelectedTextColor, TextColor))
 	xbblbl_ItemText.Text = GenerateText(Text,IIf(isSelected,SelectedTextColor, TextColor))
-	xbblbl_ItemText.ParseAndDraw
 	UpdateBBLabelHeight(xbblbl_ItemText)
 	xbblbl_ItemText.DisableResizeEvent = True
 	xbblbl_ItemText.ForegroundImageView.Left = 0dip 'set this after you set the text.
-	'm_SearchByText
 	
 '	Dim xpnl69 As B4XView = xui.CreatePanel("")
 '	xpnl_ItemBackground.AddView(xpnl69,xiv_Icon.Left,xiv_Icon.Top,xiv_Icon.Width,xiv_Icon.Height)
@@ -1135,7 +1140,7 @@ Private Sub UpdateBBLabelHeight(lbl As BBLabel)
 			Dim Height As Double = lbl.Padding.Top + (line.BaselineY - line.MaxHeightAboveBaseLine) / m_TextEngine.mScale - 1dip
 			
 			Dim ClipPanel As B4XView = xui.CreatePanel("")
-			ClipPanel.Color = xui.Color_Transparent
+			ClipPanel.Color = xui.Color_Red'xui.Color_Transparent
 			lbl.mBase.AddView(ClipPanel,0,Height,lbl.mBase.Width,Height)
 			lbl.mBase.Top = lbl.mBase.Top + (lbl.mBase.Height - Height)
 			'lbl.Text = lbl.Text & "..."
