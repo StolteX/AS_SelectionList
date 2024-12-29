@@ -63,6 +63,10 @@ V2.03 (nicht veröffentlicht)
 	-New get EmptyListTextLabel
 	-New get and set EmptyListText
 	-New get and set EmptySearchListText
+	-New get and set EmptyListTextVisibility - If False then no Empty list text is displayed
+		Default: True
+	-New CustomDrawItem Event
+	-New AS_SelectionList_CustomDrawItemViews Type
 	-Update Base_Resize - if the width changes, the items are recreated
 	-Change The ItemText is now based on BBLabel
 #End If
@@ -81,6 +85,7 @@ V2.03 (nicht veröffentlicht)
 #DesignerProperty: Key: SeperatorColor, DisplayName: SeperatorColor, FieldType: Color, DefaultValue: 0x28000000
 #DesignerProperty: Key: SearchTextHighlightedColor, DisplayName: SearchTextHighlightedColor, FieldType: Color, DefaultValue: 0xFFDD5F60, Description: The text color of the searched text when searching for something via SearchByText
 
+#Event: CustomDrawItem(Item As Object,Views As AS_SelectionList_CustomDrawItemViews)
 #Event: SelectionChanged
 
 Sub Class_Globals
@@ -92,6 +97,8 @@ Sub Class_Globals
 	Type AS_SelectionList_SubItem(RootItem As AS_SelectionList_Item,Text As String,Icon As B4XBitmap,Value As Object)
 	Type AS_SelectionList_SubItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int,SeperatorColor As Int,Height As Float)
 	Type AS_SelectionList_SelectedSubItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int)
+	
+	Type AS_SelectionList_CustomDrawItemViews(BackgroundPanel As B4XView,ItemBackgroundPanel As B4XView,ItemTextLabel As BBLabel,CheckIconLabel As B4XView,SeperatorPanel As B4XView,IconImageView As B4XView,CollapsIconLabel As B4XView)
 	
 	Private mEventName As String 'ignore
 	Private mCallBack As Object 'ignore
@@ -140,6 +147,7 @@ Sub Class_Globals
 	'***
 	
 	'***EmptyList***
+	Private m_EmptyListTextVisibility As Boolean = True
 	Private xlbl_EmptyListText As B4XView
 	Private m_EmptyListText As String = "Nothing here yet"
 	Private m_EmptySearchListText As String = "No items found"
@@ -415,7 +423,7 @@ Public Sub Clear
 	m_DataMap.Clear
 	
 	xlbl_EmptyListText.Text = m_EmptyListText
-	xlbl_EmptyListText.Visible = True
+	xlbl_EmptyListText.Visible = True And m_EmptyListTextVisibility
 End Sub
 
 'Takes a snapshot of the layout and displays it in an ImageView
@@ -461,7 +469,7 @@ Public Sub RebuildList
 	Next
 	
 	xlbl_EmptyListText.Text = m_EmptyListText
-	xlbl_EmptyListText.Visible = xclv_Main.Size = 0
+	xlbl_EmptyListText.Visible = xclv_Main.Size = 0 And m_EmptyListTextVisibility
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
@@ -499,7 +507,7 @@ Public Sub SearchByText(Text As String)
 	Next
 	
 	xlbl_EmptyListText.Text = m_EmptySearchListText
-	xlbl_EmptyListText.Visible = xclv_Main.Size = 0
+	xlbl_EmptyListText.Visible = xclv_Main.Size = 0 And m_EmptyListTextVisibility
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
@@ -532,7 +540,7 @@ Public Sub SearchByValue(Value As Object)
 	Next
 	
 	xlbl_EmptyListText.Text = m_EmptySearchListText
-	xlbl_EmptyListText.Visible = xclv_Main.Size = 0
+	xlbl_EmptyListText.Visible = xclv_Main.Size = 0 And m_EmptyListTextVisibility
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
@@ -647,6 +655,15 @@ End Sub
 #End Region
 
 #Region Properties
+
+'If False then no Empty list text is displayed
+Public Sub setEmptyListTextVisibility(Visible As Boolean)
+	m_EmptyListTextVisibility = Visible
+End Sub
+
+Public Sub getEmptyListTextVisibility As Boolean
+	Return m_EmptyListTextVisibility
+End Sub
 
 '<code>AS_SelectionList1.EmptyListTextLabel.Font = xui.CreateDefaultBoldFont(20)</code>
 Public Sub getEmptyListTextLabel As B4XView
@@ -1082,8 +1099,8 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	xbblbl_ItemText.WordWrap = True
 	'xbblbl_ItemText.Text = GenerateText(Text,IIf(isSelected,SelectedTextColor, TextColor))
 	xbblbl_ItemText.Text = GenerateText(Text,IIf(isSelected,SelectedTextColor, TextColor))
+	xbblbl_ItemText.ParseAndDraw
 	UpdateBBLabelHeight(xbblbl_ItemText)
-	'xbblbl_ItemText.ParseAndDraw
 	xbblbl_ItemText.DisableResizeEvent = True
 	xbblbl_ItemText.ForegroundImageView.Left = 0dip 'set this after you set the text.
 	'm_SearchByText
@@ -1094,6 +1111,18 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 '	xlbl_CheckItem.Color = xui.Color_Blue
 '	xpnl_ItemText.Color = xui.Color_Magenta
 '	xlbl_CollapsButton.Color = xui.Color_Red
+	
+	Dim Views As AS_SelectionList_CustomDrawItemViews
+	Views.Initialize
+	Views.BackgroundPanel = xpnl_Background
+	Views.ItemBackgroundPanel = xpnl_ItemBackground
+	Views.ItemTextLabel = xbblbl_ItemText
+	Views.CheckIconLabel = xlbl_CheckItem
+	Views.SeperatorPanel = xpnl_Seperator
+	Views.IconImageView = xiv_Icon
+	Views.CollapsIconLabel = xlbl_CollapsButton
+	
+	CustomDrawItem(Item,Views)
 	
 End Sub
 
@@ -1395,6 +1424,12 @@ Private Sub SelectionChanged
 	If m_HapticFeedback Then XUIViewsUtils.PerformHapticFeedback(mBase)
 	If xui.SubExists(mCallBack, mEventName & "_SelectionChanged",0) Then
 		CallSub(mCallBack, mEventName & "_SelectionChanged")
+	End If
+End Sub
+
+Private Sub CustomDrawItem(Item As Object,Views As AS_SelectionList_CustomDrawItemViews)
+	If xui.SubExists(mCallBack, mEventName & "_CustomDrawItem",2) Then
+		CallSub3(mCallBack, mEventName & "_CustomDrawItem",Item,Views)
 	End If
 End Sub
 
