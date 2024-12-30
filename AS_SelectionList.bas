@@ -55,7 +55,7 @@ V2.02
 	-New Designer Property SelectionIconAlignment
 		-Default: Right
 	-New get and set ShowSeperators
-V2.03 (nicht veröffentlicht)
+V2.03
 	-New RefreshList - Removes the layout of the items and rebuilds the layout
 	-New Designer Property SearchTextHighlightedColor - The text color of the searched text when searching for something via SearchByText
 		-Default: Red
@@ -296,7 +296,7 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 
 	m_TextEngine.Initialize(mBase)
 	#If B4I
-	m_TextEngine.mScale = GetDeviceLayoutValues.NonnormalizedScale + 0.2
+	m_TextEngine.mScale = GetDeviceLayoutValues.NonnormalizedScale
 	#End If
 
 	#If B4A
