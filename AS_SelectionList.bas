@@ -295,9 +295,6 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	mBase.AddView(xlbl_EmptyListText,mBase.Width/2 - 200dip/2,mBase.Height/2 - 100dip/2,200dip,100dip)
 
 	m_TextEngine.Initialize(mBase)
-	#If B4I
-	m_TextEngine.mScale = GetDeviceLayoutValues.NonnormalizedScale
-	#End If
 
 	#If B4A
 	Base_Resize(mBase.Width,mBase.Height)
