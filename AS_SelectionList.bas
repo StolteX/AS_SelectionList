@@ -70,6 +70,8 @@ V2.03
 	-New AddItem2 - Adding an item with AS_SelectionList_Item parameter
 	-Update Base_Resize - if the width changes, the items are recreated
 	-Change The ItemText is now based on BBLabel
+V2.04
+	-New SelectionItemChanged Event - In the event, the item that was checked/unchecked is returned in order to be able to react better instead of always having to go through the complete selected item list
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -88,6 +90,7 @@ V2.03
 
 #Event: CustomDrawItem(Item As Object,Views As AS_SelectionList_CustomDrawItemViews)
 #Event: SelectionChanged
+#Event: SelectionItemChanged(Item As Object,Checked As Boolean)
 
 Sub Class_Globals
 	
@@ -565,10 +568,14 @@ Public Sub ClearSelections
 	xiv_RefreshImage.SetVisibleAnimated(0,True)
 	Sleep(0)
 	
+	For Each k As Object In m_SelectionMap.Keys
+		SelectionItemChanged(k,False)
+	Next
+	
 	m_SelectionMap.Clear
 	ClearListIntern(xclv_Main,False)
 	ClearListIntern(xclv_SubItems,False)
-	SelectionChanged
+	SelectionChanged(Null,False)
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
@@ -1207,9 +1214,8 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 					For Each SubItem As AS_SelectionList_SubItem In lstSubItems
 						ItemClickIntern(SubItem,IndexCounter+1,xclv_SubItems,False)
 						IndexCounter = IndexCounter +1
+						SelectionItemChanged(SubItem,m_SelectionMap.ContainsKey(SubItem))
 					Next
-					
-					SelectionChanged
 					
 				Case getRootItemClickBehavior_SelectRootItem
 					
@@ -1326,12 +1332,17 @@ Private Sub ItemClickIntern(ThisItem As Object,Index As Int,xclv As CustomListVi
 	If m_SelectionMap.ContainsKey(ThisItem) And m_CanDeselect Then
 		m_SelectionMap.Remove(ThisItem)
 		HandleSelection(xclv.GetPanel(Index),xclv)
-		If WithEvent Then SelectionChanged
+		If WithEvent Then SelectionChanged(ThisItem,False)
 	Else If m_SelectionMap.ContainsKey(ThisItem) = False Then
 		
 		If m_SelectionMode = "Single" Then
 			
 			If m_SelectionMap.Size > 0 Then
+				
+				For Each k As Object In m_SelectionMap.Keys
+					SelectionItemChanged(k,False)
+				Next
+				
 				m_SelectionMap.Clear
 				ClearListIntern(xclv_Main,True)
 				ClearListIntern(xclv_SubItems,True)
@@ -1347,13 +1358,13 @@ Private Sub ItemClickIntern(ThisItem As Object,Index As Int,xclv As CustomListVi
 '			Next
 			m_SelectionMap.Put(ThisItem,Index)
 			HandleSelection(xclv.GetPanel(Index),xclv)
-			If WithEvent Then SelectionChanged
+			If WithEvent Then SelectionChanged(ThisItem,True)
 			If m_isSubMenuOpen Then CloseSubMenu
 		Else If m_SelectionMode = "Multi" Then
 			If m_MaxSelectionCount > 0 And m_MaxSelectionCount = m_SelectionMap.Size Then Return
 			m_SelectionMap.Put(ThisItem,Index)
 			HandleSelection(xclv.GetPanel(Index),xclv)
-			If WithEvent Then SelectionChanged
+			If WithEvent Then SelectionChanged(ThisItem,True)
 		End If
 		
 	End If
@@ -1422,7 +1433,8 @@ End Sub
 
 #Region Events
 
-Private Sub SelectionChanged
+Private Sub SelectionChanged(Item As Object,Checked As Boolean)
+	If Item <> Null Then SelectionItemChanged(Item,Checked)
 	If m_HapticFeedback Then XUIViewsUtils.PerformHapticFeedback(mBase)
 	If xui.SubExists(mCallBack, mEventName & "_SelectionChanged",0) Then
 		CallSub(mCallBack, mEventName & "_SelectionChanged")
@@ -1432,6 +1444,12 @@ End Sub
 Private Sub CustomDrawItem(Item As Object,Views As AS_SelectionList_CustomDrawItemViews)
 	If xui.SubExists(mCallBack, mEventName & "_CustomDrawItem",2) Then
 		CallSub3(mCallBack, mEventName & "_CustomDrawItem",Item,Views)
+	End If
+End Sub
+
+Private Sub SelectionItemChanged(Item As Object,Checked As Boolean)
+	If xui.SubExists(mCallBack, mEventName & "_SelectionItemChanged",2) Then
+		CallSub3(mCallBack, mEventName & "_SelectionItemChanged",Item,Checked)
 	End If
 End Sub
 
