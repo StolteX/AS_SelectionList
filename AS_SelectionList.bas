@@ -72,6 +72,9 @@ V2.03
 	-Change The ItemText is now based on BBLabel
 V2.04
 	-New SelectionItemChanged Event - In the event, the item that was checked/unchecked is returned in order to be able to react better instead of always having to go through the complete selected item list
+V2.05
+	-New DeselectItem - Deselect by AS_SelectionList_Item or AS_SelectionList_SubItem
+	-New DeselectItem2 - Deselect by Value
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -366,13 +369,14 @@ Public Sub Base_Resize (Width As Double, Height As Double)
 	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
 	xlbl_EmptyListText.SetLayoutAnimated(0,mBase.Width/2 - IIf(Width<200dip,Width,200dip)/2,mBase.Height/2 - 100dip/2,IIf(Width<200dip,Width,200dip), 100dip)
 	
-	xclv_Main.sv.ScrollViewOffsetY = OldOffsetY
+	xclv_Main.sv.ScrollViewOffsetY = Max(0,OldOffsetY)
 	
 	If m_OldWidth <> Width Then
 		Sleep(0)
 		RefreshList
 	End If
 	m_OldWidth = mBase.Width
+
 End Sub
 
 #Region Methods
@@ -594,6 +598,77 @@ Public Sub GetSelections As List
 		lst.Add(k)
 	Next
 	Return lst
+End Sub
+
+'Returns True if the item was found
+Public Sub DeselectItem(Item As Object) As Boolean
+	If m_SelectionMap.ContainsKey(Item) Then
+		
+		If Item Is AS_SelectionList_Item Then
+			Dim Index As Int = -1
+			For i = 0 To xclv_Main.Size -1
+				If xclv_Main.GetValue(i) = Item Then
+					Index = i
+					Exit
+				End If
+			Next
+				
+			If Index > -1 Then ItemClickIntern(Item,Index,xclv_Main,False)
+		Else If Item Is AS_SelectionList_SubItem Then
+			
+			Dim Index As Int = -1
+			For i = 0 To xclv_SubItems.Size -1
+				If xclv_SubItems.GetValue(i) = Item Then
+					Index = i
+					Exit
+				End If
+			Next
+				
+			If Index > -1 Then ItemClickIntern(Item,Index,xclv_SubItems,False)
+			
+		End If
+		
+		Return True
+	End If
+	Return False
+End Sub
+
+'Returns True if the item was found
+Public Sub DeselectItem2(Value As Object) As Boolean
+	For Each k As Object In m_SelectionMap.Keys
+		If k Is AS_SelectionList_Item Then
+			If k.As(AS_SelectionList_Item).Value = Value Then
+				
+				Dim Index As Int = -1
+				For i = 0 To xclv_Main.Size -1
+					If xclv_Main.GetValue(i) = k Then
+						Index = i
+						Exit
+					End If
+				Next
+				
+				If Index > -1 Then ItemClickIntern(k,Index,xclv_Main,False)
+				
+				Return True
+			End If
+		Else If k Is AS_SelectionList_SubItem Then
+			If k.As(AS_SelectionList_SubItem).Value = Value Then
+				
+				Dim Index As Int = -1
+				For i = 0 To xclv_SubItems.Size -1
+					If xclv_SubItems.GetValue(i) = k Then
+						Index = i
+						Exit
+					End If
+				Next
+				
+				If Index > -1 Then ItemClickIntern(k,Index,xclv_SubItems,False)
+
+				Return True
+			End If
+		End If	
+	Next
+	Return False
 End Sub
 
 '<code>AS_SelectionList1.SetSelections(Array As Object(1,3))</code>
