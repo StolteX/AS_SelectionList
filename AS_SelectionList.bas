@@ -75,6 +75,8 @@ V2.04
 V2.05
 	-New DeselectItem - Deselect by AS_SelectionList_Item or AS_SelectionList_SubItem
 	-New DeselectItem2 - Deselect by Value
+V2.06
+	-BugFix subitems list height is now maximum as high as the space below
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -1355,11 +1357,12 @@ Private Sub xclv_Main_ItemClick (Index As Int, Value As Object)
 			xclv_SubItems.Add(xpnl_Background,SubItem)
 				
 		Next
-		
-		Dim Height As Float = g_ItemProperties.Height*(xclv_SubItems.Size) 'Action Menu Height
-   
+	
 		Dim RawListItem As CLVItem = xclv_Main.GetRawListItem(Index) 'Gets the raw list item
 		Dim Top As Float = (RawListItem.Offset - xclv_Main.sv.ScrollViewOffsetY) '+ RawListItem.Panel.Height 'Calculates the right top
+		
+		Dim Height As Float = Min(xclv_Main.AsView.Height - Top, g_ItemProperties.Height*(xclv_SubItems.Size)) 'Action Menu Height
+   
 		If Top + Height > xpnl_SubItemBackground.Height Then 'If the menu no longer fits on the screen, display the menu above the list item
 			Top = xpnl_SubItemBackground.Height - Height
 		End If
