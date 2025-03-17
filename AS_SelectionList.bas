@@ -77,6 +77,8 @@ V2.05
 	-New DeselectItem2 - Deselect by Value
 V2.06
 	-BugFix subitems list height is now maximum as high as the space below
+V2.07
+	-BugFix
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -261,7 +263,7 @@ End Sub
 Public Sub CreateViewPerCode(Parent As B4XView,Left As Float,Top As Float,Width As Float,Height As Float)
 	
 	Dim xpnl_ViewBase As B4XView = xui.CreatePanel("")
-	Parent.AddView(xpnl_ViewBase,Left,Top,Width,Height)
+	Parent.AddView(xpnl_ViewBase,Left,Top,Max(1dip,Width),Max(1dip,Height))
 	
 	DesignerCreateView(xpnl_ViewBase,CreateLabel(""),CreateMap())
 	
@@ -1247,8 +1249,8 @@ Private Sub GenerateText(MainText As String,TextColor As Int) As String
 	Dim EndIndex As Int = StartIndex + SearchTextLower.Length
 
 	' Split MainText into parts
-	Dim BeforeText As String = MainText.SubString2(0, StartIndex)
-	Dim HighlightText As String = MainText.SubString2(StartIndex, EndIndex)
+	Dim BeforeText As String = MainText.SubString2(0, Min(MainText.Length,StartIndex))
+	Dim HighlightText As String = MainText.SubString2(StartIndex,Min(MainText.Length, EndIndex))
 	Dim AfterText As String = MainText.SubString(EndIndex)
 
 	' Create BBCode
