@@ -79,6 +79,9 @@ V2.06
 	-BugFix subitems list height is now maximum as high as the space below
 V2.07
 	-BugFix
+V2.08
+	-New AS_SelectionList_CheckItemProperties Type
+	-New get CheckItemProperties
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -109,6 +112,7 @@ Sub Class_Globals
 	Type AS_SelectionList_SubItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int,SeperatorColor As Int,Height As Float)
 	Type AS_SelectionList_SelectedSubItemProperties(BackgroundColor As Int,xFont As B4XFont,TextColor As Int)
 	
+	Type AS_SelectionList_CheckItemProperties(UncheckIcon As String,CheckedIcon As String,xFont As B4XFont,SelectedTextColor As Int,UnselectedTextColor As Int)
 	Type AS_SelectionList_CustomDrawItemViews(BackgroundPanel As B4XView,ItemBackgroundPanel As B4XView,ItemTextLabel As BBLabel,CheckIconLabel As B4XView,SeperatorPanel As B4XView,IconImageView As B4XView,CollapsIconLabel As B4XView)
 	
 	Private mEventName As String 'ignore
@@ -124,6 +128,7 @@ Sub Class_Globals
 	Private g_SubItemProperties As AS_SelectionList_SubItemProperties
 	Private g_SelectedItemProperties As AS_SelectionList_SelectedItemProperties
 	Private g_SelectedSubItemPropertiess As AS_SelectionList_SelectedSubItemProperties
+	Private g_CheckItemProperties As AS_SelectionList_CheckItemProperties
 	
 	Private xclv_Main As CustomListView
 	Private m_SelectionMap As Map
@@ -168,7 +173,7 @@ Sub Class_Globals
 	
 	Private xiv_RefreshImage As B4XView
 	
-	Type AS_SelectionList_Theme(BackgroundColor As Int,Item_BackgroundColor As Int,Item_TextColor As Int,Item_SeperatorColor As Int,SubItem_BackgroundColor As Int,SubItem_TextColor As Int,SubItem_SeperatorColor As Int,SearchTextHighlightedColor As Int,EmptyListTextColor As Int)
+	Type AS_SelectionList_Theme(BackgroundColor As Int,Item_BackgroundColor As Int,Item_TextColor As Int,Item_SeperatorColor As Int,SubItem_BackgroundColor As Int,SubItem_TextColor As Int,SubItem_SeperatorColor As Int,SearchTextHighlightedColor As Int,EmptyListTextColor As Int,CheckItem_SelectedTextColor As Int,CheckItem_UnselectedTextColor As Int)
 	
 End Sub
 
@@ -190,6 +195,9 @@ Public Sub setTheme(Theme As AS_SelectionList_Theme)
 	
 	g_SelectedSubItemPropertiess.BackgroundColor = Theme.SubItem_BackgroundColor
 	g_SelectedSubItemPropertiess.TextColor = Theme.SubItem_TextColor
+	
+	g_CheckItemProperties.SelectedTextColor = Theme.CheckItem_SelectedTextColor
+	g_CheckItemProperties.UnselectedTextColor = Theme.CheckItem_UnselectedTextColor
 	
 	m_SearchTextHighlightedColor = Theme.SearchTextHighlightedColor
 	xlbl_EmptyListText.TextColor = Theme.EmptyListTextColor
@@ -223,6 +231,8 @@ Public Sub getTheme_Dark As AS_SelectionList_Theme
 	Theme.Item_SeperatorColor = xui.Color_ARGB(40,255,255,255)
 	Theme.SearchTextHighlightedColor = xui.Color_ARGB(255,221, 95, 96)
 	Theme.EmptyListTextColor = xui.Color_White
+	Theme.CheckItem_SelectedTextColor = xui.Color_White
+	Theme.CheckItem_UnselectedTextColor = xui.Color_White
 	
 	Theme.SubItem_BackgroundColor = xui.Color_ARGB(255,32, 33, 37)
 	Theme.SubItem_TextColor = xui.Color_White
@@ -242,6 +252,8 @@ Public Sub getTheme_Light As AS_SelectionList_Theme
 	Theme.Item_SeperatorColor = xui.Color_ARGB(40,0,0,0)
 	Theme.SearchTextHighlightedColor = xui.Color_ARGB(255,221, 95, 96)
 	Theme.EmptyListTextColor = xui.Color_Black
+	Theme.CheckItem_SelectedTextColor = xui.Color_Black
+	Theme.CheckItem_UnselectedTextColor = xui.Color_Black
 	
 	
 	Theme.SubItem_BackgroundColor = xui.Color_ARGB(255,227, 226, 232)
@@ -359,6 +371,13 @@ Private Sub IniProps(Props As Map)
 	g_SelectedSubItemPropertiess.BackgroundColor = xui.PaintOrColorToColor(Props.GetDefault("ItemBackgroundColor",0xFFE3E2E8))
 	g_SelectedSubItemPropertiess.TextColor = xui.Color_Black
 	g_SelectedSubItemPropertiess.xFont = xui.CreateDefaultBoldFont(16)
+	
+	g_CheckItemProperties.Initialize
+	g_CheckItemProperties.xFont = xui.CreateMaterialIcons(20)
+	g_CheckItemProperties.CheckedIcon = Chr(0xE5CA)
+	g_CheckItemProperties.UncheckIcon = ""
+	g_CheckItemProperties.SelectedTextColor = xui.Color_Black
+	g_CheckItemProperties.UnselectedTextColor = xui.Color_Black
 	
 End Sub
 
@@ -749,6 +768,14 @@ End Sub
 
 #Region Properties
 
+'Defaults:
+'xFont - <code>xui.CreateMaterialIcons(20)</code>
+'CheckedIcon - <code>Chr(0xE5CA)</code>
+'UncheckIcon - <code>""</code>
+Public Sub getCheckItemProperties As AS_SelectionList_CheckItemProperties
+	Return g_CheckItemProperties
+End Sub
+
 'If False then no Empty list text is displayed
 Public Sub setEmptyListTextVisibility(Visible As Boolean)
 	m_EmptyListTextVisibility = Visible
@@ -1074,14 +1101,14 @@ Private Sub BuildItem(xpnl_Background As B4XView,Item As Object,xclv As CustomLi
 	
 	Dim xlbl_CheckItem As B4XView = CreateLabel("")
 	xlbl_CheckItem.Tag = "xlbl_CheckItem"
-	xlbl_CheckItem.TextColor = IIf(isSelected,SelectedTextColor, TextColor)
+	xlbl_CheckItem.TextColor = IIf(isSelected,g_CheckItemProperties.SelectedTextColor, g_CheckItemProperties.UnselectedTextColor)
 	xlbl_CheckItem.SetTextAlignment("CENTER","CENTER")
-	xlbl_CheckItem.Font = xui.CreateMaterialIcons(20)
+	xlbl_CheckItem.Font = g_CheckItemProperties.xFont
 	
 	If m_SelectionMap.ContainsKey(Item) Then
-		xlbl_CheckItem.Text = Chr(0xE5CA)
+		xlbl_CheckItem.Text = g_CheckItemProperties.CheckedIcon
 	Else
-		xlbl_CheckItem.Text = ""
+		xlbl_CheckItem.Text = g_CheckItemProperties.UncheckIcon
 	End If
 
 	Dim xpnl_Seperator As B4XView = xui.CreatePanel("")
