@@ -82,6 +82,8 @@ V2.07
 V2.08
 	-New AS_SelectionList_CheckItemProperties Type
 	-New get CheckItemProperties
+V2.09
+	-BugFixes - Thanks to @Peter Meares
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -548,6 +550,13 @@ Public Sub SearchByText(Text As String)
 	
 	Sleep(0)
 	xiv_RefreshImage.SetVisibleAnimated(0,False)
+	
+	If m_isSubMenuOpen Then
+		xpnl_SubItemBackground.SetColorAnimated(200,xpnl_SubItemBackground.Color,xui.Color_Transparent)
+		Sleep(200)
+		xpnl_SubItemBackground.Visible = False
+	End If
+	
 End Sub
 
 Public Sub SearchByValue(Value As Object)
@@ -755,11 +764,13 @@ Public Sub CloseSubMenu
 	xpnl_RootItemBackground.SendToBack
 	xclv_SubItems.Clear
 	m_isSubMenuOpen = False
-
-	Dim CurrentIndex As Int = xclv_Main.GetItemFromView(xpnl_RootClvPanelBackground)
-	If CurrentIndex = 0 Or CurrentIndex = (xclv_Main.Size -1) Then 'Runde Ecken beim 1. und letzten item
-		xpnl_RootItemBackground.SetColorAndBorder(xpnl_RootItemBackground.Color,0,0,m_CornerRadius)
-		SetPanelCornerRadius(xpnl_RootItemBackground,m_CornerRadius,IIf(CurrentIndex = 0,True,False),IIf(CurrentIndex = 0,True,False),IIf(CurrentIndex = (xclv_Main.Size -1),True,False),IIf(CurrentIndex = (xclv_Main.Size -1),True,False))
+	
+	If xclv_Main.Size > 0 Then
+		Dim CurrentIndex As Int = xclv_Main.GetItemFromView(xpnl_RootClvPanelBackground)
+		If CurrentIndex = 0 Or CurrentIndex = (xclv_Main.Size -1) Then 'Runde Ecken beim 1. und letzten item
+			xpnl_RootItemBackground.SetColorAndBorder(xpnl_RootItemBackground.Color,0,0,m_CornerRadius)
+			SetPanelCornerRadius(xpnl_RootItemBackground,m_CornerRadius,IIf(CurrentIndex = 0,True,False),IIf(CurrentIndex = 0,True,False),IIf(CurrentIndex = (xclv_Main.Size -1),True,False),IIf(CurrentIndex = (xclv_Main.Size -1),True,False))
+		End If
 	End If
 
 End Sub
