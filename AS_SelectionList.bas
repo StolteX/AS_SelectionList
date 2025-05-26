@@ -84,6 +84,9 @@ V2.08
 	-New get CheckItemProperties
 V2.09
 	-BugFixes - Thanks to @Peter Meares
+V2.10
+	-BugFix - SelectionChanged is now also triggered when you deselect items using code
+	-New SelectAll - Selects all items + subitems
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -618,6 +621,32 @@ Public Sub ClearSelections
 	
 End Sub
 
+'Selects all items + subitems
+Public Sub SelectAll
+	
+	For Each Item As AS_SelectionList_Item In m_DataMap.Keys
+		m_SelectionMap.Put(Item,"")
+	Next
+
+	For Each Item As AS_SelectionList_Item In m_SubDataMap.Keys
+		
+		Dim lstSubItems As List = m_SubDataMap.Get(Item)
+			
+		For Each SubItem As AS_SelectionList_SubItem In lstSubItems
+			m_SelectionMap.Put(SubItem,"")
+		Next
+		
+		m_SelectionMap.Put(SubItem,"")
+	Next
+	
+	RefreshList
+	
+	Dim Haptic As Boolean = m_HapticFeedback
+	m_HapticFeedback = False
+	SelectionChanged(Null,True)
+	m_HapticFeedback = Haptic
+End Sub
+
 '<code>
 '	For Each Item As Object In AS_SelectionList1.GetSelections
 '		Log("Item selected: " & Item.Text)
@@ -645,7 +674,7 @@ Public Sub DeselectItem(Item As Object) As Boolean
 				End If
 			Next
 				
-			If Index > -1 Then ItemClickIntern(Item,Index,xclv_Main,False)
+			If Index > -1 Then ItemClickIntern(Item,Index,xclv_Main,True)
 		Else If Item Is AS_SelectionList_SubItem Then
 			
 			Dim Index As Int = -1
@@ -656,7 +685,7 @@ Public Sub DeselectItem(Item As Object) As Boolean
 				End If
 			Next
 				
-			If Index > -1 Then ItemClickIntern(Item,Index,xclv_SubItems,False)
+			If Index > -1 Then ItemClickIntern(Item,Index,xclv_SubItems,True)
 			
 		End If
 		
@@ -679,7 +708,7 @@ Public Sub DeselectItem2(Value As Object) As Boolean
 					End If
 				Next
 				
-				If Index > -1 Then ItemClickIntern(k,Index,xclv_Main,False)
+				If Index > -1 Then ItemClickIntern(k,Index,xclv_Main,True)
 				
 				Return True
 			End If
@@ -694,7 +723,7 @@ Public Sub DeselectItem2(Value As Object) As Boolean
 					End If
 				Next
 				
-				If Index > -1 Then ItemClickIntern(k,Index,xclv_SubItems,False)
+				If Index > -1 Then ItemClickIntern(k,Index,xclv_SubItems,True)
 
 				Return True
 			End If
